@@ -1,12 +1,12 @@
 // Ganti data di sini untuk setiap pasangan. Semua identitas ini adalah contoh.
 // `id` harus unik agar simulasi RSVP antar-undangan tidak tercampur.
 export const invitation = {
-  id: 'demo-nadine-arga',
+  id: 'demo-undanganku',
   templateId: 'floral-reverie',
   demo: true,
   couple: [
-    { name: 'Nadine', fullName: 'Nadine Putri Anindya', family: 'Putri dari Bapak Hendra Wijaya\ndan Ibu Ratna Puspita' },
-    { name: 'Arga', fullName: 'Arga Pratama', family: 'Putra dari Bapak Bima Pratama\ndan Ibu Maya Lestari' },
+    { name: 'Mempelai Wanita', fullName: 'Nama Lengkap Wanita', family: 'Putri dari Bapak ..\ndan Ibu ..' },
+    { name: 'Mempelai Pria', fullName: 'Nama Lengkap Pria', family: 'Putra dari Bapak ..\ndan Ibu ..' },
   ],
   date: '2027-06-20T09:00:00+07:00',
   timeZone: 'Asia/Jakarta',

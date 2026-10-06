@@ -5,7 +5,7 @@ import { newInvitation, AppError } from './schema.mjs';
 
 export function initialState() {
   const now = new Date().toISOString(), id = randomUUID();
-  return { version:1, admin:null, assets:[], invitations:[{id, slug:'nadine-arga', revision:1, createdAt:now, updatedAt:now, publishedAt:null, draft:newInvitation(id), published:null, responses:[]}] };
+  return { version:1, admin:null, assets:[], invitations:[{id, slug:'contoh-undangan', revision:1, createdAt:now, updatedAt:now, publishedAt:null, draft:newInvitation(id), published:null, responses:[]}] };
 }
 export const isEmptyState = state => !state.admin && !state.assets.length && !state.invitations.length;
 
