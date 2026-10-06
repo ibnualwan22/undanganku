@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index" },
+    { "source": "/u/:slug",       "destination": "/index.html" },
+    { "source": "/preview/:slug", "destination": "/index.html" },
+    { "source": "/admin",         "destination": "/admin.html" },
+    { "source": "/admin/",        "destination": "/admin.html" }
+  ]
+}
