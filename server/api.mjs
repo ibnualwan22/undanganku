@@ -3,16 +3,25 @@ import { AppError, newInvitation, validateInvitation, publicInvitation, validate
 import { findRecord, checkRevision } from './store.mjs';
 import { hashPassword, verifyPassword, createAuth } from './auth.mjs';
 import { storageStatus, uploadMedia } from './uploads.mjs';
+import { signDirectUpload, completeDirectUpload } from './direct-uploads.mjs';
 
 export function json(res,status,data) { res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(JSON.stringify(data)); }
 async function readBody(req,limit=512*1024) {
   if(Number(req.headers['content-length'])>limit) throw new AppError('Data terlalu besar.',413);
+  if(Buffer.isBuffer(req.body)||typeof req.body==='string'){
+    const body=Buffer.from(req.body);if(body.length>limit)throw new AppError('Data terlalu besar.',413);return body;
+  }
   const parts=[]; let size=0;
   for await(const part of req) { size+=part.length; if(size>limit) throw new AppError('Data terlalu besar.',413); parts.push(part); }
   return Buffer.concat(parts);
 }
 async function readJSON(req) {
   if(!req.headers['content-type']?.startsWith('application/json')) throw new AppError('Gunakan data JSON.',415);
+  // Vercel's Node runtime can supply an already-parsed JSON body.
+  if(req.body && typeof req.body==='object' && !Buffer.isBuffer(req.body)){
+    if(Buffer.byteLength(JSON.stringify(req.body))>512*1024)throw new AppError('Data terlalu besar.',413);
+    return req.body;
+  }
   try { return JSON.parse((await readBody(req)).toString('utf8')); } catch(error) { if(error instanceof AppError) throw error; throw new AppError('Data JSON tidak valid.'); }
 }
 const summary=record=>({id:record.id,slug:record.slug,names:record.draft.couple.map(person=>person.name).join(' & '),date:record.draft.date,status:record.published?'published':'draft',revision:record.revision,updatedAt:record.updatedAt,publishedAt:record.publishedAt,responses:record.responses.length});
@@ -23,7 +32,7 @@ export async function createAPI({store,env,directory}) {
     const password=await hashPassword(env.ADMIN_PASSWORD);
     await store.change(state=>{if(!state.admin)state.admin={username:env.ADMIN_USERNAME||'admin',password};});
   }
-  const auth=createAuth(env.APP_ORIGIN?.startsWith('https://'));
+  const auth=createAuth(env.APP_ORIGIN?.startsWith('https://'),store.sessions);
   const setupAllowed=req=>loopback(req)&&!env.APP_ORIGIN;
   const limits=new Map();
   function throttle(key,max,window=600000) {
@@ -40,7 +49,7 @@ export async function createAPI({store,env,directory}) {
       if(req.headers.origin!==expected) throw new AppError('Permintaan berasal dari halaman yang tidak diizinkan.',403);
     }
     if(path==='/api/session' && method==='GET') {
-      const current=auth.session(req);
+      const current=await auth.session(req);
       json(res,200,{initialized:!!(await store.read()).admin,setupAllowed:setupAllowed(req),authenticated:!!current,...(current?{username:current.username,csrf:current.csrf}:{}),storage:storageStatus(env),database:{provider:store.provider||'json'}}); return;
     }
     if(path==='/api/setup' && method==='POST') {
@@ -50,17 +59,17 @@ export async function createAPI({store,env,directory}) {
       if(!/^[a-zA-Z0-9_.-]{3,40}$/.test(username)) throw new AppError('Username terdiri dari 3–40 huruf, angka, titik, garis bawah, atau tanda hubung.');
       const password=await hashPassword(input.password);
       await store.change(state=>{if(state.admin) throw new AppError('Akun admin sudah dibuat.',409);state.admin={username,password};});
-      json(res,201,{...auth.login(res,username)});return;
+      json(res,201,{...await auth.login(res,username)});return;
     }
     if(path==='/api/login' && method==='POST') {
       throttle(`login:${req.socket.remoteAddress}`,15);
       const input=await readJSON(req), admin=(await store.read()).admin;
       if(!admin || !(await verifyPassword(input.password,admin.password)) || input.username!==admin.username) throw new AppError('Username atau password tidak cocok.',401);
-      json(res,200,auth.login(res,admin.username));return;
+      json(res,200,await auth.login(res,admin.username));return;
     }
-    if(path==='/api/logout' && method==='POST') {auth.require(req,true);auth.logout(req,res);json(res,200,{ok:true});return;}
+    if(path==='/api/logout' && method==='POST') {await auth.require(req,true);await auth.logout(req,res);json(res,200,{ok:true});return;}
     if(path.startsWith('/api/admin/')) {
-      auth.require(req,!['GET','HEAD'].includes(method));
+      await auth.require(req,!['GET','HEAD'].includes(method));
       if(path==='/api/admin/invitations' && method==='GET') {json(res,200,{invitations:(await store.read()).invitations.map(summary)});return;}
       if(path==='/api/admin/invitations' && method==='POST') {
         const id=randomUUID(), now=new Date().toISOString();
@@ -80,6 +89,16 @@ export async function createAPI({store,env,directory}) {
         if(!file || typeof file.arrayBuffer!=='function' || !['image','audio'].includes(kind)) throw new AppError('File atau jenis upload tidak valid.');
         const asset=await uploadMedia({buffer:Buffer.from(await file.arrayBuffer()),kind,name:file.name,env,directory});
         await store.change(state=>state.assets.push(asset));json(res,201,{asset});return;
+      }
+      if(path==='/api/admin/uploads/sign' && method==='POST') {
+        throttle(`upload-sign:${req.socket.remoteAddress}`,80);
+        json(res,200,signDirectUpload(await readJSON(req),env));return;
+      }
+      if(path==='/api/admin/uploads/complete' && method==='POST') {
+        throttle(`upload-complete:${req.socket.remoteAddress}`,120);
+        const input=await readJSON(req), asset=await completeDirectUpload(input.ticket,env);
+        await store.change(state=>{if(!state.assets.some(item=>item.id===asset.id))state.assets.push(asset);});
+        json(res,201,{asset});return;
       }
       const match=path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9-]+)(?:\/(publish|unpublish|responses))?$/);
       if(match) {

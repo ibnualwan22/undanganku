@@ -19,6 +19,8 @@ test('file validation and Cloudinary configuration do not silently downgrade par
   assert.equal(storageStatus({}).provider,'local');
   assert.equal(storageStatus({CLOUDINARY_API_KEY:'test'}).ready,false);
   assert.equal(storageStatus({MEDIA_STORAGE:'cloudinary'}).ready,false);
+  assert.equal(storageStatus({VERCEL:'1'}).ready,false);
+  assert.equal(storageStatus({VERCEL:'1',MEDIA_STORAGE:'local'}).ready,false);
   assert.throws(()=>detectMedia(Buffer.from('<svg onload="alert(1)"></svg>'),'image'));
   assert.throws(()=>detectMedia(Buffer.from('<html>test</html>'),'audio'));
 });
@@ -82,7 +84,7 @@ test('admin integration: authenticated editing, uploads, publication, persistenc
       assert.deepEqual(published.gallery,[]);assert.equal(published.accounts[0].number,'001234567890');
       record.draft.couple[0].name='Revisi Draft';
       record=(await request(`/api/admin/invitations/${record.id}`,{method:'PUT',body:record})).data;
-      assert.equal((await request(`/api/invitations/${record.slug}`,{auth:false})).data.couple[0].name,'Nadine');
+      assert.equal((await request(`/api/invitations/${record.slug}`,{auth:false})).data.couple[0].name,published.couple[0].name);
       const renamed={...record,slug:'tautan-lain'};assert.equal((await request(`/api/admin/invitations/${record.id}`,{method:'PUT',body:renamed})).status,400);
     });
     await t.test('RSVP stored once, wishes require moderation, attendance remains private',async()=>{

@@ -9,3 +9,25 @@
 .auth-art>div>p:last-child,.auth-art>span{color:#6e815f}
 .mobile-editor-tools{display:none}
 @media(max-width:1000px){.mobile-editor-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}.mobile-editor-tools .studio-button{font-size:10px;min-height:38px;padding:9px 12px}.mobile-editor-tools .text-button{font-size:10px;padding:0 4px;min-height:38px}}
+
+/* Temporary guest link generator: uses the editor's existing fields and buttons. */
+.guest-tool-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.guest-tool-actions button:disabled,.guest-results button:disabled{cursor:default}
+.guest-tool-note{font-size:11px;line-height:1.9;color:#707d65;margin:18px 0 28px}
+.guest-results{border-top:1px solid #dfe6d4;padding-top:24px}
+.guest-results-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:16px;flex-wrap:wrap}
+.guest-results-heading h3{font:600 13px var(--sans);color:var(--ink)}
+#guest-link-status{font-size:11px;color:#707d65;margin-top:5px}
+.guest-results-empty{font-size:12px;color:#707d65;line-height:1.9;padding:24px 18px;background:#f4f6ee;border:1px dashed #d8e1cb;border-radius:4px}
+.guest-link-rows{list-style:none;padding:0;margin:0;max-height:520px;overflow:auto;overscroll-behavior:contain}
+.guest-link-rows li{display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:1px solid #e1e7d9}
+.guest-link-rows li:first-child{padding-top:4px}
+.guest-link-detail{flex:1;min-width:0}
+.guest-link-detail strong{display:block;font-size:12px;font-weight:600;margin-bottom:8px;overflow-wrap:anywhere}
+.admin-app .guest-link-detail input{font-size:11px;padding:8px 10px;min-height:36px;background:#f7f8f2;color:#647258}
+.guest-link-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
+.guest-link-actions .studio-button{min-height:38px;padding:8px 12px;font-size:11px}
+.guest-link-actions .text-button{display:inline-flex;gap:5px;align-items:center;font-size:10px;min-height:38px}
+.guest-link-actions .icon{width:14px;height:14px}
+.guest-copy-fallback{margin-top:22px;padding:16px;background:#f4f6ee;border:1px solid #d8e1cb;border-radius:4px}
+@media(max-width:700px){.guest-link-rows li{align-items:stretch;flex-direction:column;gap:10px}.guest-link-actions{justify-content:flex-end}.admin-app .guest-link-detail input{font-size:16px}.guest-tool-note{font-size:10px}.guest-results-heading{gap:12px}.guest-results-heading .studio-button{font-size:11px}.guest-tool-actions{gap:14px}.guest-link-rows{max-height:470px}}

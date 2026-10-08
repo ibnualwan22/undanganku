@@ -4,7 +4,7 @@ Admin untuk mengelola banyak undangan dengan template pertama **Floral Reverie**
 
 ## Mulai menggunakan
 
-Memerlukan Node.js 22+. Tidak ada dependensi npm yang perlu diinstal.
+Memerlukan Node.js 22+. Jalankan `npm ci` untuk memasang driver PostgreSQL.
 
 1. Salin `.env.example` menjadi `.env` jika file tersebut belum ada.
 2. Jalankan `npm run dev`.
@@ -41,7 +41,7 @@ CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=undangan-onlineku
 ```
 
-- Jika ketiga kredensial terisi, upload baru dikirim ke Cloudinary melalui server dengan signature. Secret tidak dikirim ke frontend.
+- Jika ketiga kredensial terisi, admin meminta signature dari server, mengirim file langsung ke Cloudinary, lalu server memverifikasi metadata sebelum menyimpan URL. Secret tidak dikirim ke frontend; file besar tidak melewati Vercel Function.
 - Jika seluruh kredensial kosong dalam mode `auto`, file disimpan lokal di `data/uploads/`; status ini terlihat di admin.
 - Jika kredensial hanya terisi sebagian, upload ditolak dengan pesan konfigurasi yang perlu dilengkapi.
 - `MEDIA_STORAGE=cloudinary` mewajibkan konfigurasi Cloudinary. `MEDIA_STORAGE=local` memilih penyimpanan lokal secara eksplisit.
@@ -49,7 +49,46 @@ CLOUDINARY_FOLDER=undangan-onlineku
 - Menghapus gambar dari editor hanya menghapus penggunaannya pada draft. File asli dipertahankan agar versi terbit yang masih menggunakannya tidak rusak.
 - Mengaktifkan Cloudinary tidak memindahkan file lokal lama secara otomatis.
 
-Implementasi mengikuti [Cloudinary Upload API](https://cloudinary.com/documentation/image_upload_api_reference) dan [dokumentasi upload bertanda tangan](https://cloudinary.com/documentation/upload_images). Pengujian otomatis memakai respons Cloudinary tiruan; upload ke akun Cloudinary nyata perlu kredensial milik pengelola.
+Implementasi mengikuti [Cloudinary Upload API](https://cloudinary.com/documentation/image_upload_api_reference) dan [upload langsung dari browser](https://cloudinary.com/documentation/client_side_uploading). Pengujian otomatis memakai respons Cloudinary tiruan. Upload audio WAV 5,76 MB juga telah diuji ke Cloudinary nyata, dikonfirmasi melalui Admin API, dan aset uji dihapus sesudahnya.
+
+## PostgreSQL
+
+PostgreSQL menyimpan akun admin, isi undangan, draft/versi terbit, rekening, RSVP, metadata media, dan sesi login. File gambar/musik tetap di Cloudinary; tabel media hanya memuat URL serta metadata.
+
+Isi `DATABASE_URL` pada `.env` (lokal) atau Environment Variables Vercel. Gunakan connection string dan pengaturan SSL dari penyedia PostgreSQL. Untuk Vercel, gunakan koneksi dengan pooling yang disediakan penyedia. Kredensial tidak perlu ditulis dalam kode.
+
+```dotenv
+DATABASE_URL=postgresql://user:password@host:5432/database
+MEDIA_STORAGE=cloudinary
+```
+
+Setelah mengisi koneksi:
+
+```sh
+npm run db:check
+```
+
+Perintah ini memeriksa koneksi dan menyiapkan skema `undangan`. Jika ada data JSON lama, **hentikan server yang menulis JSON**, cadangkan folder `data/`, lalu jalankan:
+
+```sh
+npm run db:migrate-json
+# Atau sumber lain:
+npm run db:migrate-json -- /path/backup/store.json
+```
+
+Migrasi hanya berjalan ke database aplikasi yang kosong. Hash password, slug, draft, versi terbit, rekening, respons, dan URL media dipertahankan. File JSON sumber tidak dihapus. Migrasi kedua ditolak agar tidak menimpa data. File upload lokal lama tidak dipindahkan ke Cloudinary; unggah ulang dari admin sebelum pindah ke hosting tanpa disk persisten.
+
+Ketika `DATABASE_URL` terisi, aplikasi memakai PostgreSQL dan tidak beralih diam-diam ke JSON jika koneksi gagal. Jika kosong, mode lokal tetap memakai JSON. Vercel mewajibkan PostgreSQL. Pada database kosong tanpa data JSON lama, contoh undangan dibuat saat startup.
+
+Tabel: `admins`, `invitations` (draft/terbit memakai JSONB), `responses`, `assets`, dan `sessions`. Perubahan memakai transaksi; penulisan diserialkan melalui advisory lock agar perubahan bersamaan tidak saling menimpa. Adapter saat ini membaca snapshot data aplikasi sebelum perubahan dan hanya menulis baris yang berubah. Untuk volume besar, lapisan repository perlu query per undangan dan pagination. Pola transaksi mengikuti [node-postgres](https://node-postgres.com/features/transactions).
+
+## Upload musik di Vercel
+
+[Vercel membatasi body request Function hingga 4,5 MB](https://vercel.com/docs/functions/limitations#request-body-size). Jalur lama mengirim seluruh file melalui Function dan dapat menghasilkan HTTP 413/non-JSON. Jalur Cloudinary saat ini hanya mengirim metadata kecil ke endpoint `/api/admin/uploads/sign` dan `/api/admin/uploads/complete`; file dikirim langsung dari browser ke Cloudinary.
+
+Di Vercel isi `DATABASE_URL`, `APP_ORIGIN=https://domain-anda`, `MEDIA_STORAGE=cloudinary`, dan ketiga kredensial Cloudinary. Untuk akun pertama, isi juga `ADMIN_USERNAME` dan `ADMIN_PASSWORD`. Setelah memperbarui kode atau environment, redeploy. Konfigurasi `vercel.json` mempertahankan route API, menyertakan migrasi SQL, dan mengizinkan koneksi browser ke Cloudinary. Jangan memakai `/tmp` Vercel untuk menyimpan data undangan atau file permanen.
+
+Jika upload masih gagal, catat HTTP status yang ditampilkan admin. HTTP 401 meminta login ulang; 403 perlu memeriksa origin/sesi; penolakan Cloudinary menampilkan pesan layanan. Setelah berhasil, simpan draft dan perbarui terbitan supaya musik muncul kepada tamu.
 
 ## Embed Google Maps
 
@@ -70,10 +109,10 @@ Nama digunakan sebagai sapaan, bukan verifikasi identitas. Nama dan ucapan di-es
 ## Penyimpanan dan hosting
 
 - `.env` dan folder `data/` tidak masuk Git dan tidak dilayani sebagai file web.
-- `data/store.json` menyimpan akun (hash scrypt), undangan, metadata media, dan RSVP. Penulisan dilakukan secara atomik; `store.json.bak` adalah satu versi cadangan terakhir.
+- Pada mode JSON, `data/store.json` menyimpan akun (hash scrypt), undangan, metadata media, dan RSVP. Penulisan dilakukan secara atomik; `store.json.bak` adalah satu versi cadangan terakhir. Pada mode PostgreSQL, gunakan backup database dari penyedia atau `pg_dump`.
 - `data/uploads/` berisi file lokal. Folder `data/` harus berada pada **disk persisten** dan dicadangkan oleh pengelola hosting. Satu cadangan terakhir tidak menggantikan backup berkala di tempat terpisah.
-- Implementasi ini untuk **satu proses Node.js dengan satu direktori data**. Jangan menjalankan beberapa instance yang menulis direktori yang sama. Untuk skala multi-instance perlu basis data bersama.
-- Sesi admin menggunakan cookie HttpOnly/SameSite dan kedaluwarsa setelah 12 jam; restart server meminta login ulang.
+- Mode JSON hanya untuk **satu proses Node.js dengan satu direktori data**. PostgreSQL memakai transaksi bersama dan sesi login persisten sehingga dapat digunakan beberapa instance Function. Pembatasan frekuensi request masih per instance; untuk trafik besar perlu pembatasan bersama di gateway atau database.
+- Sesi admin menggunakan cookie HttpOnly/SameSite dan kedaluwarsa setelah 12 jam. Pada mode PostgreSQL, token sesi disimpan sebagai hash dan logout berlaku antar-instance. Pada mode JSON, restart server meminta login ulang.
 - Default server hanya mendengarkan `127.0.0.1`. Untuk hosting gunakan HTTPS/reverse proxy, isi `APP_ORIGIN=https://domain-anda`, dan atur `HOST` sesuai lingkungan.
 - Buat akun sebelum dipublikasikan, atau isi `ADMIN_USERNAME` dan `ADMIN_PASSWORD` sebelum startup pertama. Setup browser dinonaktifkan ketika `APP_ORIGIN` diisi. Password dari env hanya membuat akun awal, tidak menimpa akun yang sudah ada.
 - `APP_ORIGIN` harus sama persis dengan origin situs, tanpa garis miring di akhir. Koneksi API mutasi memeriksa origin dan sesi admin memerlukan CSRF token.
@@ -98,6 +137,14 @@ node tests/browser.mjs
 ```
 
 Jangan menjalankan tes browser pada data utama. Screenshot pemeriksaan berada di `test-results/` dan diabaikan Git.
+
+Pengujian PostgreSQL nyata menggunakan `TEST_DATABASE_URL` terpisah:
+
+```sh
+TEST_DATABASE_URL=postgresql://test_user:password@localhost:5432/postgres npm test
+```
+
+Akun pengujian memerlukan izin membuat database. Tes membuat database bernama acak, menguji migrasi, rollback, perubahan bersamaan, serta sesi lintas instance, lalu menghapus database uji. Tanpa variabel tersebut, pengujian PostgreSQL dilewati. Jangan menggunakan koneksi produksi untuk pengujian.
 
 ## Struktur
 

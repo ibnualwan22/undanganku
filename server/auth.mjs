@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scrypt, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { AppError } from './schema.mjs';
 const derive = promisify(scrypt);
@@ -12,30 +12,33 @@ export async function verifyPassword(password,stored) {
   const actual = await derive(String(password).slice(0,200),salt,64), expected = Buffer.from(hash,'hex');
   return actual.length === expected.length && timingSafeEqual(actual,expected);
 }
-export function createAuth(secure = false) {
+export function createAuth(secure = false, persistentSessions = null) {
   const sessions = new Map();
   const cookie = (value,maxAge) => `undangan_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
-  function session(req) {
+  const tokenHash = token => createHash('sha256').update(token).digest('hex');
+  async function session(req) {
     const token = req.headers.cookie?.split(';').map(part => part.trim()).find(part => part.startsWith('undangan_session='))?.slice(17);
-    const found = sessions.get(token);
+    if (!/^[a-f0-9]{64}$/.test(token || '')) return null;
+    const found = persistentSessions ? await persistentSessions.get(tokenHash(token)) : sessions.get(token);
     if (!found || found.expires < Date.now()) { if (found) sessions.delete(token); return null; }
     return { ...found, token };
   }
   return {
     session,
-    login(res,username) {
+    async login(res,username) {
       for (const [key,value] of sessions) if (value.expires < Date.now()) sessions.delete(key);
       if (sessions.size >= 50) sessions.delete(sessions.keys().next().value);
       const token = randomBytes(32).toString('hex'), csrf = randomBytes(24).toString('hex');
-      sessions.set(token,{username,csrf,expires:Date.now()+12*3600_000});
+      const value={username,csrf,expires:Date.now()+12*3600_000};
+      if(persistentSessions)await persistentSessions.set(tokenHash(token),value);else sessions.set(token,value);
       res.setHeader('Set-Cookie',cookie(token,12*3600)); return {username,csrf};
     },
-    require(req, mutation = false) {
-      const current = session(req);
+    async require(req, mutation = false) {
+      const current = await session(req);
       if (!current) throw new AppError('Silakan masuk kembali ke admin.',401);
       if (mutation && req.headers['x-csrf-token'] !== current.csrf) throw new AppError('Sesi formulir tidak valid. Muat ulang halaman.',403);
       return current;
     },
-    logout(req,res) { const current = session(req); if (current) sessions.delete(current.token); res.setHeader('Set-Cookie',cookie('',0)); },
+    async logout(req,res) { const current = await session(req); if (current) {if(persistentSessions)await persistentSessions.delete(tokenHash(current.token));else sessions.delete(current.token);} res.setHeader('Set-Cookie',cookie('',0)); },
   };
 }

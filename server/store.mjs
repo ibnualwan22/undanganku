@@ -10,6 +10,7 @@ export function initialState() {
 export const isEmptyState = state => !state.admin && !state.assets.length && !state.invitations.length;
 
 export async function createConfiguredStore({directory, env}) {
+  if(env.VERCEL && !env.DATABASE_URL?.trim())throw new Error('DATABASE_URL wajib diisi pada Vercel. Penyimpanan JSON lokal hanya untuk server dengan disk persisten.');
   if (!env.DATABASE_URL?.trim()) return createStore(directory);
   const { createPostgresStore } = await import('./postgres-store.mjs');
   const store = await createPostgresStore({env});

@@ -32,10 +32,11 @@ export async function createPostgresStore({env}) {
       await client.query('CREATE SCHEMA IF NOT EXISTS undangan');
       await client.query('CREATE TABLE IF NOT EXISTS undangan.schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const {rows} = await client.query('SELECT version FROM undangan.schema_migrations ORDER BY version');
-      if (rows.some(row => row.version > 1)) throw new Error('Versi database lebih baru daripada aplikasi ini.');
-      if (!rows.some(row => row.version === 1)) {
-        await client.query(await readFile(new URL('./migrations/001-initial.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO undangan.schema_migrations(version) VALUES (1)');
+      const migrations = ['001-initial.sql', '002-sessions.sql'];
+      if (rows.some(row => row.version > migrations.length)) throw new Error('Versi database lebih baru daripada aplikasi ini.');
+      for (const [index, file] of migrations.entries()) if (!rows.some(row => row.version === index + 1)) {
+        await client.query(await readFile(new URL('./migrations/' + file, import.meta.url), 'utf8'));
+        await client.query('INSERT INTO undangan.schema_migrations(version) VALUES ($1)', [index + 1]);
       }
     }, {write:true});
   } catch (error) { await pool.end(); throw error; }
@@ -52,6 +53,20 @@ export async function createPostgresStore({env}) {
       }, {write:true});
     },
     close: () => pool.end(),
+    sessions: {
+      async get(tokenHash) {
+        const {rows} = await pool.query('SELECT username, csrf, expires_at FROM undangan.sessions WHERE token_hash=$1 AND expires_at > now()', [tokenHash]);
+        return rows[0] ? {username:rows[0].username, csrf:rows[0].csrf, expires:rows[0].expires_at.getTime()} : null;
+      },
+      async set(tokenHash, session) {
+        await transaction(async client => {
+          await client.query('DELETE FROM undangan.sessions WHERE expires_at <= now()');
+          await client.query('INSERT INTO undangan.sessions(token_hash, username, csrf, expires_at) VALUES ($1,$2,$3,$4)', [tokenHash, session.username, session.csrf, new Date(session.expires)]);
+          await client.query('DELETE FROM undangan.sessions WHERE token_hash IN (SELECT token_hash FROM undangan.sessions WHERE username=$1 ORDER BY expires_at DESC OFFSET 50)', [session.username]);
+        }, {write:true});
+      },
+      delete: tokenHash => pool.query('DELETE FROM undangan.sessions WHERE token_hash=$1', [tokenHash]),
+    },
   };
 }
 

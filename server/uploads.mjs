@@ -7,9 +7,10 @@ export function storageStatus(env) {
   const count = [env.CLOUDINARY_CLOUD_NAME,env.CLOUDINARY_API_KEY,env.CLOUDINARY_API_SECRET].filter(Boolean).length;
   const mode = env.MEDIA_STORAGE || 'auto';
   if (!['auto','local','cloudinary'].includes(mode)) return {provider:'unavailable',ready:false,message:'MEDIA_STORAGE harus auto, local, atau cloudinary.'};
+  if (env.VERCEL && mode === 'local') return {provider:'cloudinary',ready:false,message:'Gunakan MEDIA_STORAGE=cloudinary di Vercel. Penyimpanan file lokal tidak permanen.'};
   if (mode === 'local') return {provider:'local',ready:true,message:'Upload disimpan pada server ini.'};
   if (count === 3) return {provider:'cloudinary',ready:true,message:'Cloudinary siap menerima upload.'};
-  if (count || mode === 'cloudinary') return {provider:'cloudinary',ready:false,message:'Lengkapi CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, dan CLOUDINARY_API_SECRET di .env, lalu restart server.'};
+  if (count || mode === 'cloudinary' || env.VERCEL) return {provider:'cloudinary',ready:false,message:'Lengkapi CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, dan CLOUDINARY_API_SECRET pada environment server, lalu restart atau redeploy.'};
   return {provider:'local',ready:true,message:'Cloudinary belum dikonfigurasi. Upload disimpan pada server ini.'};
 }
 export function detectMedia(buffer,kind) {
