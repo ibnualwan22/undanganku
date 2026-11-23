@@ -1,4 +1,5 @@
-import { templates } from './invitation.js';
+import { prepareMonochrome, animateMonochrome } from './monochrome.js';
+import { getTemplate } from './templates.js';
 import { loadInvitation, isLive, isPreview } from './load-invitation.js';
 import { escapeHTML as esc, getGuest, countdownTo, formatDate, formatTime, createCalendar } from './utils.js';
 import { createMusic } from './music.js';
@@ -8,6 +9,9 @@ if (data) renderInvitation(data);
 
 function renderInvitation(data) {
 const sections = data.sections;
+const template = getTemplate(data.templateId);
+document.body.dataset.template = template.id;
+document.querySelector('meta[name="theme-color"]').content = template.palette[0];
 const paths = {
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
   leaf: '<path d="M20 4C9 2 3 7 5 14c7 3 15-2 15-10Z"/><path d="M4 21 15 10"/>',
@@ -35,11 +39,11 @@ const [bride, groom] = data.couple;
 const names = data.couple.map(person => person.name).join(' & ');
 const initials = data.couple.map(person => person.name[0]);
 const storageKey = `undangan:${data.id}:demo-rsvp`;
-document.title = `${names} — ${templates[0].name}`;
+document.title = `${names} — ${template.name}`;
 
 document.querySelector('#app').innerHTML = `
   ${isPreview ? '<div class="preview-banner">PRATINJAU DRAFT · HANYA UNTUK PENGELOLA</div>' : ''}
-  ${data.demo ? '<div class="preview-banner"><span class="preview-dot"></span><span><strong>Floral Reverie</strong><span class="preview-divider">/</span>Pratinjau template · data & foto contoh</span></div>' : ''}
+  ${data.demo ? `<div class="preview-banner"><span class="preview-dot"></span><span><strong>${esc(template.name)}</strong><span class="preview-divider">/</span>Pratinjau template · data & foto contoh</span></div>` : ''}
   <main>
     <section class="cover" id="cover" aria-labelledby="cover-title">
       <div class="cover-line cover-line-left" aria-hidden="true"></div><div class="cover-line cover-line-right" aria-hidden="true"></div>
@@ -47,6 +51,7 @@ document.querySelector('#app').innerHTML = `
       ${floral('cover-flower-left')}${floral('cover-flower-right')}
       <div class="cover-arch" aria-hidden="true"></div>${data.coverPhoto ? `<img class="cover-background-photo" src="${esc(data.coverPhoto)}" alt=""/>` : ''}
       <div class="cover-content">
+        ${template.id === 'sunset-bloom' ? '<div class="sunset-sun" aria-hidden="true"><span></span></div>' : ''}
         <div class="botanical-mark">${icon('leaf')}</div>
         <p class="eyebrow">THE WEDDING OF</p>
         <h1 id="cover-title"><span>${esc(bride.name)}</span><span class="name-second"><em>&</em> ${esc(groom.name)}</span></h1>
@@ -101,7 +106,7 @@ document.querySelector('#app').innerHTML = `
       </section>
       <section class="wishes-section section" aria-labelledby="wishes-title"><div class="section-heading reveal"><p class="eyebrow">WORDS FROM THE HEART</p><h2 id="wishes-title">Titip <em>doa & cinta</em></h2><p>Setiap kata baik adalah hadiah yang berarti.</p></div><div id="wishes-list" class="wishes-list"></div><p class="subtle-note">Ucapan simulasi hanya terlihat di browser ini.</p><button class="text-button clear-demo" id="clear-demo" hidden>Hapus data simulasi di browser ini</button></section>
       ${sections.gifts && data.accounts.length ? `<section class="gift-section section" id="hadiah" aria-labelledby="gift-title"><div class="section-heading reveal"><p class="eyebrow">A LITTLE TOKEN OF LOVE</p><h2 id="gift-title">Tanda <em>kasih</em></h2><p>${esc(data.giftIntro)}</p></div><div class="gift-grid">${data.accounts.map(account=>`<article class="gift-card"><p class="gift-bank">${esc(account.bank)}</p><p class="gift-number">${esc(account.number)}</p><p class="gift-holder">a.n. ${esc(account.holder)}</p>${account.qr ? `<img class="gift-qr" src="${esc(account.qr)}" alt="QR rekening ${esc(account.holder)}" loading="lazy"/>`:''}<button class="button button-outline" data-copy-account="${esc(account.number)}">${icon('copy')}Salin nomor rekening</button></article>`).join('')}</div></section>`:''}
-      <footer class="closing section">${floral('closing-flower-left')}${floral('closing-flower-right')}<div class="closing-inner"><div class="botanical-mark">${icon('leaf')}</div><p class="eyebrow">UNTIL OUR HAPPY DAY</p><h2>Sampai bertemu di<br><em>hari bahagia kami.</em></h2><p>${esc(data.closingText || 'Terima kasih telah menjadi bagian dari perjalanan kami. Doa dan kehadiranmu adalah kebahagiaan bagi kami.')}</p><p class="closing-names">${esc(names)}</p><span class="closing-date">${esc(dateLabel)}</span></div><div class="footer-note"><span>Made with love</span><span>FLORAL REVERIE <i>by</i> Undangan Onlineku</span><a href="#cover">Kembali ke atas ↑</a></div></footer>
+      <footer class="closing section">${floral('closing-flower-left')}${floral('closing-flower-right')}<div class="closing-inner"><div class="botanical-mark">${icon('leaf')}</div><p class="eyebrow">UNTIL OUR HAPPY DAY</p><h2>Sampai bertemu di<br><em>hari bahagia kami.</em></h2><p>${esc(data.closingText || 'Terima kasih telah menjadi bagian dari perjalanan kami. Doa dan kehadiranmu adalah kebahagiaan bagi kami.')}</p><p class="closing-names">${esc(names)}</p><span class="closing-date">${esc(dateLabel)}</span></div><div class="footer-note"><span>Made with love</span><span>${esc(template.name.toUpperCase())} <i>by</i> Undangan Onlineku</span><a href="#cover">Kembali ke atas ↑</a></div></footer>
     </div>
   </main>
   <button type="button" class="music-button" id="music-button" aria-label="Putar musik" title="Putar musik" aria-pressed="false">${icon('music')}<span class="music-status" aria-hidden="true">OFF</span></button>
@@ -109,6 +114,8 @@ document.querySelector('#app').innerHTML = `
   <dialog id="gallery-dialog" class="gallery-dialog" aria-label="Galeri foto pernikahan"><button class="dialog-close" aria-label="Tutup galeri">${icon('close')}</button><button class="gallery-prev gallery-control" aria-label="Foto sebelumnya">${icon('chevron')}</button><figure><img id="dialog-image" alt=""/><figcaption id="dialog-caption"></figcaption></figure><button class="gallery-next gallery-control" aria-label="Foto berikutnya">${icon('chevron')}</button><p class="gallery-counter" id="gallery-counter"></p></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 `;
+
+if(template.id==='monochrome-vows')prepareMonochrome(data);
 
 const hiddenSections = {quote:'.quote-section',couplePhoto:'.couple-photo-wrap',countdown:'.countdown, #countdown-ended',calendar:'#save-calendar',story:'.story-section',gallery:'.gallery-section',music:'#music-button',wishes:'.wishes-section',closing:'.closing'};
 // Fit each name to the cover instead of clipping long names on narrow screens.
@@ -152,9 +159,11 @@ let opened = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const content = document.querySelector('#invitation-content');
 const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-  if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver.unobserve(entry.target); }
+  if (template.id==='monochrome-vows') { entry.target.classList.toggle('is-visible',entry.isIntersecting); }
+  else if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver.unobserve(entry.target); }
 }), { threshold: 0.08 });
 document.querySelectorAll('.reveal').forEach(element => revealObserver.observe(element));
+if(template.id==='monochrome-vows')animateMonochrome(reducedMotion);
 
 function openInvitation(target = '#mempelai') {
   if (!opened) {

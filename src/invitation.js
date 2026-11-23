@@ -47,12 +47,4 @@ export const invitation = {
   ],
 };
 
-// Registry ini dapat dipakai halaman order ketika pilihan template ditambahkan.
-export const templates = [{
-  id: 'floral-reverie',
-  name: 'Floral Reverie',
-  description: 'Bunga cat air, ivory hangat, dan hijau sage. Romantis dan tenang.',
-  category: 'Floral',
-  palette: ['#f8f6ef', '#50624b', '#d9b8af'],
-  preview: '/?preview=floral-reverie',
-}];
+export { templates } from './templates.js';

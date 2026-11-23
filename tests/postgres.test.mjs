@@ -74,6 +74,12 @@ test('PostgreSQL migration, transactions, concurrent writes, persistent sessions
       assert.notEqual(publicData.couple[0].name,'Draft baru');
       assert.equal((await fetch(bases[1]+`/api/admin/invitations/${record.id}/responses`,{method:'PATCH',headers,body:JSON.stringify({id:responseId,visible:false})})).status,200);
       assert.equal((await a.read()).invitations[0].responses[0].visible,false);
+      const create=await fetch(bases[1]+'/api/admin/invitations',{method:'POST',headers,body:JSON.stringify({templateId:'sunset-bloom'})});
+      assert.equal(create.status,201);const sunset=await create.json();
+      assert.equal((await a.read()).invitations.find(item=>item.id===sunset.id).draft.templateId,'sunset-bloom');
+      assert.equal((await fetch(bases[1]+`/api/admin/invitations/${sunset.id}/publish`,{method:'POST',headers,body:JSON.stringify({revision:sunset.revision})})).status,200);
+      const liveSunset=await(await fetch(bases[0]+'/api/invitations/'+sunset.slug)).json();
+      assert.equal(liveSunset.templateId,'sunset-bloom');assert.equal(liveSunset.decoration,'/assets/sunset-bloom.webp');
       assert.equal((await fetch(bases[1]+'/api/logout',{method:'POST',headers,body:'{}'})).status,200);
       assert.equal((await(await fetch(bases[0]+'/api/session',{headers:{Cookie:cookie}})).json()).authenticated,false);
     });

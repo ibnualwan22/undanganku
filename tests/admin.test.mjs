@@ -59,6 +59,34 @@ test('admin integration: authenticated editing, uploads, publication, persistenc
       assert.equal((await request('/api/admin/invitations',{method:'POST',body:{},origin:'https://evil.test'})).status,403);
       const prior=csrf;csrf='bad';assert.equal((await request('/api/admin/invitations',{method:'POST',body:{}})).status,403);csrf=prior;
     });
+    await t.test('template choice survives creation, editing, publication and restart',async()=>{
+      const before=(await request('/api/admin/invitations')).data.invitations.length;
+      for (const templateId of ['garden-celebration','lilac-romance','invalid','']) {
+        assert.equal((await request('/api/admin/invitations',{method:'POST',body:{templateId}})).status,400);
+      }
+      assert.equal((await request('/api/admin/invitations')).data.invitations.length,before);
+      const created=await request('/api/admin/invitations',{method:'POST',body:{templateId:'sunset-bloom'}});
+      assert.equal(created.status,201);
+      let sunset=created.data;
+      assert.equal(sunset.draft.templateId,'sunset-bloom');
+      sunset.draft.accounts=[{bank:'Bank Contoh',number:'001234567890',holder:'Pasangan',qr:''}];
+      sunset.draft.sections.gifts=true;
+      let saved=await request(`/api/admin/invitations/${sunset.id}`,{method:'PUT',body:sunset});
+      assert.equal(saved.status,200);sunset=saved.data;
+      assert.equal(sunset.draft.templateId,'sunset-bloom');
+      assert.equal((await request(`/api/admin/invitations/${sunset.id}/publish`,{method:'POST',body:{revision:sunset.revision}})).status,200);
+      sunset=(await request(`/api/admin/invitations/${sunset.id}`)).data;
+      assert.equal((await request(`/api/invitations/${sunset.slug}`,{auth:false})).data.templateId,'sunset-bloom');
+      const list=(await request('/api/admin/invitations')).data.invitations;
+      assert.equal(list.find(record=>record.id===sunset.id).templateId,'sunset-bloom');
+      sunset.draft.templateId='floral-reverie';
+      saved=await request(`/api/admin/invitations/${sunset.id}`,{method:'PUT',body:sunset});
+      assert.equal(saved.status,200);
+      assert.deepEqual(saved.data.draft.accounts,sunset.draft.accounts);
+      assert.equal((await request(`/api/invitations/${sunset.slug}`,{auth:false})).data.templateId,'sunset-bloom');
+      const restarted=await createStore(directory);
+      assert.equal(restarted.read().invitations.find(record=>record.id===sunset.id).draft.templateId,'floral-reverie');
+    });
     let record=(await request('/api/admin/invitations')).data.invitations[0];
     record=(await request(`/api/admin/invitations/${record.id}`)).data;
     await t.test('drafts remain private and media can be uploaded from multipart forms',async()=>{

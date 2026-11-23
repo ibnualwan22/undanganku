@@ -1,0 +1,146 @@
+/* Sunset Bloom shares content and interactions with Floral Reverie. */
+body[data-template="sunset-bloom"]{--paper:#fff8ec;--paper-dark:#f8e6c8;--green:#a3472d;--ink:#623520;--muted:#82604a;--line:#dfc6a5;--blush:#e6ad49}
+[data-template="sunset-bloom"] .preview-banner{background:#f4deb5;color:#72462f}
+[data-template="sunset-bloom"] .preview-dot{background:#a3472d}
+[data-template="sunset-bloom"] .preview-divider{color:#94644a}
+[data-template="sunset-bloom"] h2[tabindex="-1"]:focus{outline:none}
+[data-template="sunset-bloom"] .cover{background:#a3472d;padding:58px 0 72px;min-height:100svh}
+[data-template="sunset-bloom"] .cover::before{content:'';position:absolute;inset:20px;border:1px solid #f1ba7470;pointer-events:none;z-index:-1}
+[data-template="sunset-bloom"] .cover-arch{top:38px;bottom:44px;height:auto;max-height:none;width:600px;max-width:calc(100% - 48px);background:#fff3d9;border:1px solid #edc17c;border-radius:300px 300px 12px 12px;box-shadow:0 0 0 9px #a3472d,0 0 0 10px #e8b77780}
+[data-template="sunset-bloom"] .cover-arch::after{border-color:#c4955870;inset:13px;border-radius:288px 288px 4px 4px}
+[data-template="sunset-bloom"] .cover-content{width:465px;max-width:calc(100% - 110px);padding:25px 0 30px}
+[data-template="sunset-bloom"] .cover .botanical-mark{display:none}
+.sunset-sun{display:flex;align-items:end;justify-content:center;width:86px;height:42px;margin:0 auto 19px;border-bottom:1px solid #b77632;overflow:hidden;position:relative}
+.sunset-sun::before,.sunset-sun::after{content:'';position:absolute;inset:7px 14px -29px;border:1px solid #cc984d;border-radius:50%}
+.sunset-sun::after{inset:0 7px -36px}
+.sunset-sun span{display:block;width:44px;height:23px;border-radius:44px 44px 0 0;background:#e6ad49}
+[data-template="sunset-bloom"] .cover .eyebrow{letter-spacing:4px;font-size:10px}
+[data-template="sunset-bloom"] .cover h1{font-size:clamp(72px,7.6vw,112px);line-height:1.02;letter-spacing:-3px;margin:24px 0}
+[data-template="sunset-bloom"] .cover h1 .name-second{padding-left:0;margin-top:3px}
+[data-template="sunset-bloom"] .name-second em{display:block;margin:5px 0 8px;transform:none;font-size:.42em;line-height:.8;color:#ac6933}
+[data-template="sunset-bloom"] .cover-date{margin-top:20px}
+[data-template="sunset-bloom"] .cover-date>span{background:#c69454}
+[data-template="sunset-bloom"] .cover-date p{font-size:10px;letter-spacing:1.4px}
+[data-template="sunset-bloom"] .cover-footnote{color:#916342}
+[data-template="sunset-bloom"] .cover-bottom-note{color:#ffe1ac;bottom:12px;max-width:85%;text-align:center;letter-spacing:1.8px;font-size:8px}
+[data-template="sunset-bloom"] .cover-side-note{color:#ffe0ab;left:4%;font-size:9px}
+[data-template="sunset-bloom"] .cover-line{background:#e9b37780;width:11vw}
+[data-template="sunset-bloom"] .cover-flower-left{width:clamp(370px,37vw,610px);left:calc(50% - 750px);top:auto;bottom:-105px;transform:rotate(-12deg);opacity:1;mask-image:none}
+[data-template="sunset-bloom"] .cover-flower-right{width:clamp(320px,33vw,500px);right:calc(50% - 720px);top:-70px;bottom:auto;transform:scaleX(-1) rotate(155deg);opacity:1;mask-image:none}
+[data-template="sunset-bloom"] .cover-background-photo{z-index:-1;opacity:.16}
+[data-template="sunset-bloom"] .guest-card{border-top:1px solid #dcb97e70;padding-top:20px;margin-top:22px;max-width:300px}
+[data-template="sunset-bloom"] .button{border-radius:40px}
+[data-template="sunset-bloom"] .button-primary:hover{background:#843820;box-shadow:0 4px 12px #70331520}
+[data-template="sunset-bloom"] .button-outline{border-color:#b7794e}
+[data-template="sunset-bloom"] .button-outline:hover{background:#f3dfbe}
+[data-template="sunset-bloom"] .botanical-mark,[data-template="sunset-bloom"] .little-branch{color:#a86835}
+[data-template="sunset-bloom"] .small-rule{background:#caa575}
+[data-template="sunset-bloom"] .section-heading .eyebrow,[data-template="sunset-bloom"] .story-heading .eyebrow,[data-template="sunset-bloom"] .rsvp-copy .eyebrow{color:#9c562e}
+[data-template="sunset-bloom"] .quote-section{background:#f4dda7;padding-top:85px;padding-bottom:90px}
+[data-template="sunset-bloom"] .quote-section::before,[data-template="sunset-bloom"] .quote-section::after{background:#c9955355}
+[data-template="sunset-bloom"] .quote-section .eyebrow,[data-template="sunset-bloom"] .intro-text{color:#775032}
+[data-template="sunset-bloom"] .opening-quote{font-size:clamp(32px,4vw,49px);max-width:750px}
+[data-template="sunset-bloom"] .couple-section{background:#fff8ec}
+[data-template="sunset-bloom"] .couple-photo{border-radius:160px 160px 130px 130px;outline-color:#ceaa79;outline-offset:12px;transform:rotate(-3deg);border:8px solid #f2dfbb}
+[data-template="sunset-bloom"] .couple-flower{width:230px;bottom:-65px;left:-75px}
+[data-template="sunset-bloom"] .person-label{color:#a46436}
+[data-template="sunset-bloom"] .person h3{color:#a3472d;overflow-wrap:anywhere}
+[data-template="sunset-bloom"] .full-name,[data-template="sunset-bloom"] .family{overflow-wrap:anywhere}
+[data-template="sunset-bloom"] .events-section{background:#a3472d;color:#fff3d9;border-color:#a3472d;position:relative}
+[data-template="sunset-bloom"] .events-section .section-heading .eyebrow,[data-template="sunset-bloom"] .events-section .section-heading>p:last-child,[data-template="sunset-bloom"] .countdown small,[data-template="sunset-bloom"] .countdown-divider,[data-template="sunset-bloom"] .events-section>.subtle-note{color:#f6d9b1}
+[data-template="sunset-bloom"] .countdown{gap:18px}
+[data-template="sunset-bloom"] .countdown>div{background:#ffffff0c;border:1px solid #e7b47b65;border-radius:50px 50px 10px 10px;padding:20px 14px;min-width:95px}
+[data-template="sunset-bloom"] .countdown-divider{align-self:center;margin:0;font-size:22px}
+[data-template="sunset-bloom"] .event-grid{gap:28px;max-width:930px}
+[data-template="sunset-bloom"] .event-card{color:var(--ink);background:#fff5df;border:0;border-radius:8px;padding:39px 30px 36px;border-top:5px solid #e6ad49;box-shadow:0 10px 30px #54210d15}
+[data-template="sunset-bloom"] .event-card::before{border-color:#d3b58280;border-radius:3px;inset:9px}
+[data-template="sunset-bloom"] .event-card .eyebrow,[data-template="sunset-bloom"] .event-icon{color:#a66630}
+[data-template="sunset-bloom"] .event-card h3{font-size:48px}
+[data-template="sunset-bloom"] .event-card h4,[data-template="sunset-bloom"] .event-address{overflow-wrap:anywhere}
+[data-template="sunset-bloom"] .event-map{border-color:#d5b68a}
+[data-template="sunset-bloom"] .story-section{background:#fff8ec}
+[data-template="sunset-bloom"] .story-item::after{background:#c37b3f;box-shadow:0 0 0 5px #fff8ec}
+[data-template="sunset-bloom"] .story-item:not(:last-child)::before{border-color:#d8b88d}
+[data-template="sunset-bloom"] .story-year{color:#a06435}
+[data-template="sunset-bloom"] .story-item h3,[data-template="sunset-bloom"] .story-item p{overflow-wrap:anywhere}
+[data-template="sunset-bloom"] .gallery-section{background:#f6e4bf;border:0;padding-top:85px}
+[data-template="sunset-bloom"] .gallery-grid{align-items:start;gap:28px}
+[data-template="sunset-bloom"] .gallery-item{background:#fffbef;border:9px solid #fffbef;border-bottom-width:34px;border-radius:0;box-shadow:0 8px 18px #75441b16;aspect-ratio:3/4;transform:rotate(-3deg)}
+[data-template="sunset-bloom"] .gallery-item:nth-child(3n+2){transform:rotate(3deg);margin-top:32px}
+[data-template="sunset-bloom"] .gallery-item:nth-child(3n){transform:rotate(-2deg)}
+[data-template="sunset-bloom"] .gallery-caption{font-size:24px;bottom:15px}
+[data-template="sunset-bloom"] .rsvp-section{background:#fff8ec;border:0}
+[data-template="sunset-bloom"] .rsvp-form-wrap{background:#fff3d9;border-color:#dfc398;border-radius:12px;padding:36px}
+[data-template="sunset-bloom"] .rsvp-signature,[data-template="sunset-bloom"] .rsvp-signature span{color:#a3472d}
+[data-template="sunset-bloom"] .demo-notice{background:#f5e4c3;border-color:#dbc19c;color:#805b38}
+[data-template="sunset-bloom"] :is(input,select,textarea){background-color:#fffcf5;border-color:#d9be98}
+[data-template="sunset-bloom"] :is(input,textarea)::placeholder{color:#927259}
+[data-template="sunset-bloom"] :is(input,select,textarea):focus{border-color:#a3472d}
+[data-template="sunset-bloom"] .optional{color:#806247}
+[data-template="sunset-bloom"] .wishes-section{background:#fff8ec;border-top:1px solid #e6caa5}
+[data-template="sunset-bloom"] .wish-avatar{background:#f2d6a6}
+[data-template="sunset-bloom"] .wish>.icon,[data-template="sunset-bloom"] .empty-wishes>.icon{color:#aa7440}
+[data-template="sunset-bloom"] .subtle-note,[data-template="sunset-bloom"] .clear-demo{color:#816149}
+[data-template="sunset-bloom"] .gift-section{background:#f4dda7;border-color:#dec193}
+[data-template="sunset-bloom"] .gift-card{background:#fff8ec;border-color:#dbb783;border-radius:12px}
+[data-template="sunset-bloom"] .gift-bank{color:#a3472d}
+[data-template="sunset-bloom"] .gift-holder{color:#816149}
+[data-template="sunset-bloom"] .closing{background:#a3472d;color:#fff3d9;padding-top:90px}
+[data-template="sunset-bloom"] .closing :is(.eyebrow,.botanical-mark),[data-template="sunset-bloom"] .closing-inner>p:not(.eyebrow):not(.closing-names){color:#ffe1b6}
+[data-template="sunset-bloom"] .closing-inner{max-width:650px;margin:auto}
+[data-template="sunset-bloom"] .closing-names{overflow-wrap:anywhere}
+[data-template="sunset-bloom"] .closing-flower-left,[data-template="sunset-bloom"] .closing-flower-right{opacity:1;width:400px;bottom:-90px}
+[data-template="sunset-bloom"] .closing-flower-left{left:-160px}
+[data-template="sunset-bloom"] .closing-flower-right{right:-160px}
+[data-template="sunset-bloom"] .footer-note{color:#ffdfb0;border-color:#dfb17280}
+[data-template="sunset-bloom"] .music-button{background:#fff5e1;border-color:#bd8957;box-shadow:0 4px 16px #71371726}
+[data-template="sunset-bloom"] .music-button[aria-pressed=true]{background:#a3472d;color:#fff5e1}
+[data-template="sunset-bloom"] .music-status{border-color:#bd8957}
+[data-template="sunset-bloom"] .mobile-nav:not([hidden]){background:#fff8ecf5;border-color:#d9b682;border-radius:30px}
+[data-template="sunset-bloom"] .mobile-nav a{color:#8a6545}
+[data-template="sunset-bloom"] .mobile-nav a.active{background:#f6dfb7;color:#823e23;border-radius:24px}
+[data-template="sunset-bloom"] .toast{background:#7b3b25}
+[data-template="sunset-bloom"] .gallery-dialog::backdrop{background:#341d15ed}
+@media(max-width:1100px){
+  [data-template="sunset-bloom"] .cover-flower-left{left:-145px;width:410px;bottom:-65px}
+  [data-template="sunset-bloom"] .cover-flower-right{right:-135px;width:370px;top:-110px}
+}
+@media(max-width:700px){
+  [data-template="sunset-bloom"] .cover{padding:51px 0 65px}
+  [data-template="sunset-bloom"] .cover::before{inset:12px}
+  [data-template="sunset-bloom"] .cover-arch{top:31px;bottom:40px;max-width:calc(100% - 44px);border-radius:230px 230px 7px 7px;box-shadow:0 0 0 6px #a3472d,0 0 0 7px #e8b77780}
+  [data-template="sunset-bloom"] .cover-arch::after{inset:9px;border-radius:222px 222px 3px 3px}
+  [data-template="sunset-bloom"] .cover-content{max-width:calc(100% - 98px);padding:34px 0 25px}
+  [data-template="sunset-bloom"] .cover h1{font-size:82px;letter-spacing:-2px;margin:22px 0}
+  [data-template="sunset-bloom"] .cover .eyebrow{font-size:8px;letter-spacing:2.5px}
+  [data-template="sunset-bloom"] .cover-date p{font-size:8px;letter-spacing:.8px}
+  [data-template="sunset-bloom"] .cover-date{gap:7px}
+  [data-template="sunset-bloom"] .cover-date>span{width:15px;flex-shrink:0}
+  [data-template="sunset-bloom"] .guest-card{padding-top:17px;margin-top:19px;max-width:220px}
+  [data-template="sunset-bloom"] .guest-card p{font-size:9px}
+  [data-template="sunset-bloom"] .open-button{min-width:0;max-width:100%;gap:9px;padding:13px 17px}
+  [data-template="sunset-bloom"] .cover-flower-left{width:265px;left:-149px;bottom:-38px;transform:rotate(-9deg)}
+  [data-template="sunset-bloom"] .cover-flower-right{width:220px;right:-117px;top:-88px;transform:scaleX(-1) rotate(155deg)}
+  [data-template="sunset-bloom"] .cover-bottom-note{font-size:7px;letter-spacing:1px;bottom:12px}
+  .sunset-sun{transform:scale(.8);margin-bottom:10px}
+  [data-template="sunset-bloom"] .quote-section{padding:60px 27px}
+  [data-template="sunset-bloom"] .couple-flower{width:170px;left:-63px;bottom:-46px}
+  [data-template="sunset-bloom"] .person-groom::before{color:#ad773c}
+  [data-template="sunset-bloom"] .countdown{gap:7px;margin-bottom:30px}
+  [data-template="sunset-bloom"] .countdown>div{min-width:54px;padding:16px 5px;border-radius:35px 35px 5px 5px}
+  [data-template="sunset-bloom"] .countdown [data-count]{font-size:37px}
+  [data-template="sunset-bloom"] .countdown small{font-size:7px}
+  [data-template="sunset-bloom"] .countdown-divider{font-size:16px}
+  [data-template="sunset-bloom"] .event-card{padding:32px 25px}
+  [data-template="sunset-bloom"] .event-card h3{font-size:41px}
+  [data-template="sunset-bloom"] .gallery-section{padding:65px 29px}
+  [data-template="sunset-bloom"] .gallery-grid{gap:15px}
+  [data-template="sunset-bloom"] .gallery-item{border-width:6px;border-bottom-width:24px}
+  [data-template="sunset-bloom"] .gallery-item-0{aspect-ratio:1.1;max-height:400px}
+  [data-template="sunset-bloom"] .gallery-item:nth-child(3n+2){margin-top:0}
+  [data-template="sunset-bloom"] .gallery-caption{font-size:18px;left:9px;right:9px;bottom:10px}
+  [data-template="sunset-bloom"] .rsvp-form-wrap{padding:27px 22px}
+  [data-template="sunset-bloom"] .closing{padding-top:70px}
+  [data-template="sunset-bloom"] .closing-flower-left{width:260px;left:-170px;bottom:70px}
+  [data-template="sunset-bloom"] .closing-flower-right{width:260px;right:-170px;bottom:70px}
+}

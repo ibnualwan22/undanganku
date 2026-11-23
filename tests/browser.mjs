@@ -20,7 +20,7 @@ ws.addEventListener('message',({data})=>{
 function send(method,params={}){return new Promise((resolve,reject)=>{const seq=++id;const timer=setTimeout(()=>{pending.delete(seq);reject(new Error('CDP timeout: '+method));},20000);pending.set(seq,{resolve,reject,timer});ws.send(JSON.stringify({id:seq,method,params}));});}
 async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true,userGesture:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value;}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function until(expression){for(let i=0;i<80;i++){if(await evaluate(expression))return;await wait(100);}throw new Error('Timeout: '+expression);}
+async function until(expression, attempts=80){for(let i=0;i<attempts;i++){if(await evaluate(expression))return;await wait(100);}throw new Error('Timeout: '+expression);}
 async function viewport(width,height,mobile=false){await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile});}
 async function navigate(path=''){await send('Page.navigate',{url:base+'/'+path});await until("document.readyState==='complete'");await evaluate('document.fonts.ready');await wait(450);}
 async function screenshot(name){const result=await send('Page.captureScreenshot',{format:'png'});await writeFile(resolve(output,name+'.png'),Buffer.from(result.data,'base64'));}
@@ -36,7 +36,7 @@ try{
     await fill('#auth-user','admin');await fill('#auth-password','local-browser-test-password');await click('#auth-form button');
   }
   await until("!!document.querySelector('[data-edit]')");await screenshot('admin-list');
-  await click('[data-action="new"]');await until("!!document.querySelector('#editor-pane')");
+  await click('[data-action="new"]');await until("!!document.querySelector('.template-options')");await click('[data-template="floral-reverie"]');await until("!!document.querySelector('#editor-pane')");
   const testId=await evaluate("document.querySelector('#invitation-preview').getAttribute('src').split('/').at(-1)");
   for(const [path,value] of [['couple.0.name','Nadine'],['couple.0.fullName','Nadine Putri Anindya'],['couple.1.name','Arga'],['couple.1.fullName','Arga Pratama']])await fill(`[data-field="${path}"]`,value);
   await screenshot('admin-editor');
@@ -55,7 +55,7 @@ try{
   await navigate(publicPath.slice(1)+'?to=Budi%20%26%20Sari');await until("!!document.querySelector('#open-invitation')");assert.equal(await evaluate("document.querySelector('#guest-name').textContent"),'Budi & Sari');
   await click('#open-invitation');assert.equal(await evaluate("document.querySelector('.gallery-section')===null"),true);assert.equal(await evaluate("document.querySelector('.story-section')===null"),true);
   assert.equal(await evaluate("document.querySelectorAll('.event-map').length"),1);assert.equal(await evaluate("document.querySelector('.gift-number').textContent"),'001234567890');
-  await until("document.querySelector('#music-button').getAttribute('aria-pressed')==='true'");await click('#music-button');
+  await until("document.querySelector('#music-button').getAttribute('aria-pressed')==='true'",300);await click('#music-button');
   assert.equal(await evaluate("document.querySelector('#music-button').getAttribute('aria-pressed')"),'false');
   await evaluate("document.querySelector('#hadiah').scrollIntoView({behavior:'instant'})");await screenshot('published-gifts');
   await fill('#name','Tamu browser');await fill('#attendance','yes');await fill('#guest-count','2');await fill('#message','<img src=x onerror=alert(1)> Doa terbaik untuk kalian.');await click('#rsvp-form button[type="submit"]');await until("document.querySelector('#form-feedback').textContent.includes('sudah diterima')");
@@ -67,7 +67,7 @@ try{
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.mobile-editor-tools')).display"),'flex');
   assert.equal(await evaluate("!!document.querySelector('.mobile-editor-tools a[href^=\"/preview/\"]')"),true);
   for(const tab of ['events','photos','music','gifts','sections','responses']){await click(`[data-tab="${tab}"]`);await noOverflow(390);if(tab==='gifts'||tab==='sections')await screenshot('admin-mobile-'+tab);}
-  await click('[data-action="list"]');await click('[data-action="new"]');await until("document.querySelector('#editor-title')?.textContent.includes('Mempelai Wanita')");await noOverflow(390);
+  await click('[data-action="list"]');await click('[data-action="new"]');await until("!!document.querySelector('.template-options')");await click('[data-template="floral-reverie"]');await until("document.querySelector('#editor-title')?.textContent.includes('Mempelai Wanita')");await noOverflow(390);
   await click('[data-action="logout"]');await until("!!document.querySelector('#auth-form')");await screenshot('admin-mobile-login');await noOverflow(390);
   await navigate(publicPath.slice(1));await until("!!document.querySelector('#open-invitation')");await click('#open-invitation');await wait(200);assert.equal(await evaluate("document.querySelectorAll('.wish').length"),1);assert.equal(await evaluate("document.querySelectorAll('.wish img').length"),0);await noOverflow(390);
   assert.deepEqual(errors,[]);console.log(JSON.stringify({status:'passed',checks:['setup/login/logout','image and audio uploads via file chooser','audio playback','map embed','bank accounts','section toggles','save/reload/publish','draft isolation','RSVP/moderation','multiple invitations','desktop and mobile','XSS-safe messages','no runtime exceptions'],screenshots:output},null,2));

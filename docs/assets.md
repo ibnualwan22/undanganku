@@ -1,4 +1,13 @@
-# Aset Floral Reverie
+# Aset template undangan
+
+## Ilustrasi Sunset Bloom
+
+- File proyek: `public/assets/sunset-bloom.webp` (sekitar 470 KB).
+- Dibuat menggunakan tool bawaan `image_gen` dengan latar transparan; dikonversi dari PNG ke WebP menggunakan FFmpeg dengan alpha dipertahankan.
+- Aset merupakan file bawaan template dan ikut build. Foto/dekorasi milik pasangan tetap dapat diunggah melalui admin ke Cloudinary.
+- Prompt final:
+
+> Use case: stylized-concept. Asset type: transparent decorative watercolor botanical illustration for the Sunset Bloom wedding invitation website. Primary request: a joyful lush garden floral spray in terracotta orange, apricot, golden yellow and buttery cream. Include orange cosmos, yellow and peach dahlias, cream garden roses, tiny golden wildflowers and flowing olive green leaves. Fine art hand-painted watercolor and gouache on transparent background with rich warm pigments, elegant detailed botanical wedding stationery. Portrait composition, flowers concentrated in lower left and middle, a few long leafy stems extend upward and outward, organic airy silhouette with transparent gaps. Entire arrangement within frame with generous clear margins, no cropped tips. Celebratory and warm, sophisticated not cartoonish. Actual transparent background; no paper rectangle, no backdrop, no pot or vase, no ribbon, no text or lettering, no border, no shadows, no people. Suitable for mirroring at corners and framing a cream wedding invitation.
 
 ## Ilustrasi bunga
 
@@ -29,3 +38,17 @@ Cormorant Garamond dan DM Sans dari Google Fonts, disimpan sebagai TTF lokal. Be
 ## Ikon dan musik
 
 Ikon SVG garis sederhana ditulis di dalam proyek. Musik berupa arpeggio original yang disintesis dengan Web Audio; tidak memakai rekaman komersial.
+## Potret contoh Monochrome Vows
+
+Dibuat menggunakan tool bawaan image_gen. Kedua orang adalah model fiktif untuk preview, bukan pelanggan atau orang dalam gambar referensi pengguna. PNG sumber dikonversi ke WebP 800 × 1200 dengan FFmpeg; gabungan aset sekitar 96 KB.
+
+- public/assets/monochrome-groom.webp
+- public/assets/monochrome-bride.webp
+
+Prompt final pria:
+
+> Use case: photorealistic-natural. Asset type: fictional sample portrait for an Indonesian black and white wedding invitation website, not an actual client. Fine art fashion editorial portrait, vertical 2:3 composition, chest-up, face centered and facing camera with a gentle composed expression, entire head visible with 10 percent headroom, realistic natural skin texture, soft directional studio lighting, rich true black and white photography, seamless light gray background. No text, no letters, no watermark, no frame, no props, no flowers. Subject: a fictional Indonesian man around 28, short neatly styled dark hair, wearing a white formal mandarin-collar wedding shirt.
+
+Prompt final wanita:
+
+> Use case: photorealistic-natural. Asset type: fictional sample portrait for an Indonesian black and white wedding invitation website, not an actual client. Fine art fashion editorial portrait, vertical 2:3 composition, chest-up, face centered and facing camera with a gentle composed expression, entire head visible with 10 percent headroom, realistic natural skin texture, soft directional studio lighting, rich true black and white photography, seamless light gray background. No text, no letters, no watermark, no frame, no props, no flowers. Subject: a fictional Indonesian woman around 27, wearing a neat white hijab and a simple white long sleeve wedding blouse.

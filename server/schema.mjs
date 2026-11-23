@@ -1,4 +1,6 @@
+import { normalizePortrait, portraitDemoAssets } from '../src/portraits.js';
 import { invitation } from '../src/invitation.js';
+import { availableTemplates, DEFAULT_TEMPLATE_ID, findTemplate } from '../src/templates.js';
 
 export const sectionsDefault = { quote: true, couplePhoto: true, countdown: true, calendar: true, map: true, story: true, gallery: true, music: true, rsvp: true, wishes: true, gifts: false, closing: true };
 export class AppError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
@@ -6,8 +8,15 @@ const text = (value, max = 2000) => String(value ?? '').trim().slice(0, max);
 const required = (value, label, max) => { const result = text(value, max); if (!result) throw new AppError(`${label} wajib diisi.`); return result; };
 const array = (value, max) => Array.isArray(value) ? value.slice(0, max) : [];
 
-export function newInvitation(id) {
-  return { ...structuredClone(invitation), id, demo: false, sections: { ...sectionsDefault }, coverPhoto: '', couplePhoto: invitation.gallery[0].src, decoration: '/assets/floral-watercolor.png', music: { src: '', name: '', volume: 0.4 }, accounts: [], giftIntro: 'Doa dan kehadiranmu adalah hadiah terindah. Jika ingin berbagi tanda kasih, kamu dapat mengirimkannya melalui rekening berikut.', closingText: 'Terima kasih telah menjadi bagian dari perjalanan kami. Doa dan kehadiranmu adalah kebahagiaan bagi kami.', events: invitation.events.map(event => ({ ...event, mapEmbed: '' })) };
+function validateTemplate(id = DEFAULT_TEMPLATE_ID) {
+  const template = findTemplate(id);
+  if (!template) throw new AppError('Desain undangan belum tersedia. Pilih template yang siap digunakan.');
+  return template;
+}
+
+export function newInvitation(id, templateId) {
+  const template = validateTemplate(templateId);
+  return { ...structuredClone(invitation), id, templateId: template.id, demo: false, sections: { ...sectionsDefault }, coverPhoto: '', couplePhoto: invitation.gallery[0].src, decoration: template.decoration, music: { src: '', name: '', volume: 0.4 }, accounts: [], giftIntro: 'Doa dan kehadiranmu adalah hadiah terindah. Jika ingin berbagi tanda kasih, kamu dapat mengirimkannya melalui rekening berikut.', closingText: 'Terima kasih telah menjadi bagian dari perjalanan kami. Doa dan kehadiranmu adalah kebahagiaan bagi kami.', events: invitation.events.map(event => ({ ...event, mapEmbed: '' })) };
 }
 
 export function mapEmbedURL(value) {
@@ -23,10 +32,11 @@ export function mapEmbedURL(value) {
 
 export function validateInvitation(input, id, assets = []) {
   if (!input || typeof input !== 'object') throw new AppError('Isi undangan tidak valid.');
+  const template = validateTemplate(input.templateId);
   const media = (value, kind = 'image') => {
     const url = text(value, 2000);
     if (!url) return '';
-    const stock = kind === 'image' && ['/assets/floral-watercolor.png','/assets/wedding-garden.jpg','/assets/wedding-moment.jpg','/assets/wedding-details.jpg'].includes(url);
+    const stock = kind === 'image' && [...availableTemplates.map(template => template.decoration),...portraitDemoAssets,'/assets/wedding-garden.jpg','/assets/wedding-moment.jpg','/assets/wedding-details.jpg'].includes(url);
     if (!stock && !assets.some(asset => asset.url === url && asset.kind === kind)) throw new AppError('Media harus diunggah melalui halaman admin terlebih dahulu.');
     return url;
   };
@@ -36,7 +46,7 @@ export function validateInvitation(input, id, assets = []) {
     return result;
   };
   const timeZone = ['Asia/Jakarta','Asia/Makassar','Asia/Jayapura'].includes(input.timeZone) ? input.timeZone : 'Asia/Jakarta';
-  const couple = array(input.couple, 2).map(person => ({ name: required(person?.name, 'Nama panggilan mempelai', 40), fullName: required(person?.fullName, 'Nama lengkap mempelai', 150), family: text(person?.family, 500) }));
+  const couple = array(input.couple, 2).map((person,index) => ({ name: required(person?.name, 'Nama panggilan mempelai', 40), fullName: required(person?.fullName, 'Nama lengkap mempelai', 150), family: text(person?.family, 500), portrait: { ...normalizePortrait(person?.portrait,index), src: media(person?.portrait?.src) } }));
   if (couple.length !== 2) throw new AppError('Lengkapi kedua mempelai.');
   const events = array(input.events, 8).map(event => {
     const start = date(event?.start, 'Waktu mulai acara'), end = date(event?.end, 'Waktu selesai acara');
@@ -48,7 +58,7 @@ export function validateInvitation(input, id, assets = []) {
   const accounts = array(input.accounts, 8).map(account => ({ bank: required(account?.bank, 'Nama bank',80), holder: required(account?.holder,'Nama pemilik rekening',150), number: required(account?.number,'Nomor rekening',40).replace(/[ -]/g,''), qr: media(account?.qr) }));
   if (accounts.some(account => !/^\d{5,30}$/.test(account.number))) throw new AppError('Nomor rekening harus berupa 5–30 digit.');
   const volume = Number(input.music?.volume ?? 0.4);
-  return { id, demo: false, templateId: 'floral-reverie', couple, date: date(input.date, 'Tanggal pernikahan'), timeZone, timeZoneLabel: {'Asia/Jakarta':'WIB','Asia/Makassar':'WITA','Asia/Jayapura':'WIT'}[timeZone], location: text(input.location,200), defaultGuest: text(input.defaultGuest,100) || 'Tamu Undangan', quote: text(input.quote,1500), introduction: text(input.introduction,2500), closingText: text(input.closingText,2500), giftIntro: text(input.giftIntro,1500), sections, coverPhoto: media(input.coverPhoto), couplePhoto: media(input.couplePhoto), decoration: media(input.decoration), music: { src: media(input.music?.src,'audio'), name: text(input.music?.name,200), volume: Number.isFinite(volume) ? Math.min(1,Math.max(0,volume)) : 0.4 }, events, story: array(input.story,12).map(item => ({ year: text(item?.year,40), title: required(item?.title,'Judul cerita',150), text: text(item?.text,2500) })), gallery: array(input.gallery,30).map(photo => ({ src: media(photo?.src), alt: text(photo?.alt,200), caption: text(photo?.caption,250) })).filter(photo => photo.src), accounts };
+  return { id, demo: false, templateId: template.id, couple, date: date(input.date, 'Tanggal pernikahan'), timeZone, timeZoneLabel: {'Asia/Jakarta':'WIB','Asia/Makassar':'WITA','Asia/Jayapura':'WIT'}[timeZone], location: text(input.location,200), defaultGuest: text(input.defaultGuest,100) || 'Tamu Undangan', quote: text(input.quote,1500), introduction: text(input.introduction,2500), closingText: text(input.closingText,2500), giftIntro: text(input.giftIntro,1500), sections, coverPhoto: media(input.coverPhoto), couplePhoto: media(input.couplePhoto), decoration: media(input.decoration), music: { src: media(input.music?.src,'audio'), name: text(input.music?.name,200), volume: Number.isFinite(volume) ? Math.min(1,Math.max(0,volume)) : 0.4 }, events, story: array(input.story,12).map(item => ({ year: text(item?.year,40), title: required(item?.title,'Judul cerita',150), text: text(item?.text,2500) })), gallery: array(input.gallery,30).map(photo => ({ src: media(photo?.src), alt: text(photo?.alt,200), caption: text(photo?.caption,250) })).filter(photo => photo.src), accounts };
 }
 
 export function publicInvitation(input) {

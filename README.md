@@ -1,6 +1,6 @@
 # Undangan Onlineku · Studio Admin
 
-Admin untuk mengelola banyak undangan dengan template pertama **Floral Reverie**. Gambar, dekorasi, QR rekening, dan musik diunggah dari halaman admin. Data undangan disimpan pada server, bukan hanya browser.
+Admin untuk mengelola banyak undangan dengan pilihan desain **Floral Reverie**, **Sunset Bloom**, dan **Monochrome Vows**. Gambar, dekorasi, QR rekening, dan musik diunggah dari halaman admin. Data undangan disimpan pada server, bukan hanya browser.
 
 ## Mulai menggunakan
 
@@ -13,6 +13,18 @@ Memerlukan Node.js 22+. Jalankan `npm ci` untuk memasang driver PostgreSQL.
 5. Pilih **Kelola** pada undangan contoh atau **Buat undangan** untuk pasangan baru.
 
 Halaman `/` tetap menjadi contoh template. Undangan sebenarnya menggunakan `/u/nama-tautan` setelah diterbitkan. Data contoh bawaan perlu diganti sebelum digunakan untuk acara sungguhan.
+
+## Pilihan desain
+
+Klik **Buat undangan → Pilih desain → Gunakan desain**. Tombol **Preview** membuka contoh lengkap sebelum membuat draft. Pilihan saat ini:
+
+- **Floral Reverie:** ivory dan sage dengan bunga cat air.
+- **Sunset Bloom:** terracotta, jingga, dan kuning lembut; bunga taman, sampul lengkung, serta galeri berbingkai.
+- **Garden Celebration** dan **Lilac Romance:** tercatat sebagai **Dalam rencana**, belum dapat dipilih.
+
+Preview Sunset Bloom tersedia di `/?preview=sunset-bloom`. Semua template menggunakan struktur isi yang sama, termasuk opsi komponen, foto, musik, peta, rekening, dan tautan tamu. Pada editor **Pasangan & teks → Desain undangan**, desain bisa diganti tanpa mengisi ulang konten. Dekorasi bawaan mengikuti template; dekorasi unggahan sendiri atau dekorasi yang sengaja dikosongkan dipertahankan. **Simpan draft** memperbarui preview, lalu **Perbarui terbitan** untuk menerapkan desain bagi tamu.
+
+`templateId` disimpan di JSON draft/publikasi yang sudah ada, sehingga tidak membutuhkan migrasi kolom PostgreSQL. Undangan lama tanpa `templateId` memakai Floral Reverie. Desain yang masih direncanakan atau tidak dikenal ditolak saat membuat atau menyimpan undangan.
 
 ## Alur editor
 
@@ -98,6 +110,10 @@ Server hanya menyimpan URL HTTPS embed Google Maps yang diizinkan; kode HTML ata
 
 ## Nama tamu
 
+Di admin, buka **Kelola → Buat Link Tamu**. Tempel satu nama per baris (bisa dari satu kolom Excel), lalu pilih **Buat Tautan**. Undangan harus sudah diterbitkan. Gunakan **Salin** untuk satu tautan atau **Salin Semua** untuk daftar nama beserta tautannya.
+
+Generator mengabaikan baris kosong dan nama duplikat, serta mendukung maksimal 1.000 penerima per proses dan 100 karakter per nama. Daftar hanya disimpan sementara dalam memori editor, tidak dikirim ke database atau disimpan di penyimpanan browser. Salin hasil sebelum meninggalkan editor atau memuat ulang halaman. Tautan yang sudah disalin tetap bisa dibuka berulang kali selama undangan aktif.
+
 Tambahkan parameter `to` pada tautan terbit, misalnya:
 
 ```text
@@ -131,12 +147,14 @@ npm run preview
 Tes mencakup input, zona waktu, kalender, validasi peta/media, login dan CSRF, upload lokal, signature Cloudinary, draft/publikasi, konflik revisi, persistensi, serta RSVP dan moderasi. Untuk pengujian browser terpisah:
 
 ```sh
-PORT=4180 DATA_DIR=./test-results/admin-browser-data npm run dev
+DATABASE_URL= APP_ORIGIN= VERCEL= MEDIA_STORAGE=local CLOUDINARY_CLOUD_NAME= CLOUDINARY_API_KEY= CLOUDINARY_API_SECRET= ADMIN_USERNAME=admin ADMIN_PASSWORD=local-browser-test-password PORT=4180 DATA_DIR=./test-results/admin-browser-data npm run dev
 # Jalankan Chromium terpisah dengan --remote-debugging-port=9222.
 node tests/browser.mjs
+node tests/templates-browser.mjs
+node tests/monochrome-browser.mjs
 ```
 
-Jangan menjalankan tes browser pada data utama. Screenshot pemeriksaan berada di `test-results/` dan diabaikan Git.
+Jangan menjalankan tes browser pada data utama. Kosongkan koneksi PostgreSQL/Cloudinary seperti perintah di atas agar `.env` produksi tidak dipakai. Tes template mencakup pemilihan desain, kegagalan pembuatan, pergantian desain tanpa kehilangan isi, preview, publikasi, tautan tamu, RSVP, rekening, serta tampilan HP. Screenshot pemeriksaan berada di `test-results/` dan diabaikan Git.
 
 Pengujian PostgreSQL nyata menggunakan `TEST_DATABASE_URL` terpisah:
 
@@ -150,9 +168,13 @@ Akun pengujian memerlukan izin membuat database. Tes membuat database bernama ac
 
 ```text
 admin.html, src/admin.js, src/admin.css   Antarmuka admin
-src/main.js, src/style.css               Tampilan undangan
+src/main.js, src/style.css               Tampilan dan interaksi undangan bersama
+src/sunset-bloom.css                     Desain khusus Sunset Bloom
+src/monochrome.js, src/monochrome.css     Desain dan animasi Monochrome Vows
+src/portraits.js, src/portrait-editor.js  Normalisasi potret dan pengaturan crop
 src/load-invitation.js                   Pemilihan demo, preview, atau undangan terbit
-src/invitation.js                        Data contoh dan registry template
+src/invitation.js                        Data contoh
+src/templates.js, src/template-picker.js Registry dan pemilihan desain di admin
 server/                                 API, sesi, validasi, upload, dan penyimpanan
 scripts/                                Server, build frontend, pemeriksaan sintaks
 tests/                                  Tes unit, integrasi, dan browser
@@ -161,4 +183,4 @@ docs/admin-design.md                    Keputusan implementasi admin
 docs/assets.md                          Sumber aset dan prompt ilustrasi
 ```
 
-Belum termasuk katalog/order, pembayaran, editor desain template baru, atau impor daftar tamu. Penambahan desain baru tetap memerlukan implementasi tampilan dan pendaftaran template; admin ini mengelola isi dan komponen Floral Reverie.
+Belum termasuk katalog/order publik, pembayaran, editor desain bebas, atau impor daftar tamu ke database. Penambahan desain baru memerlukan implementasi tampilan, aset, dan pendaftaran pada `src/templates.js`. Template berstatus `planned` hanya ditampilkan sebagai rencana; ubah menjadi `ready` setelah desain siap dan diuji.

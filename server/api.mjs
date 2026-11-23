@@ -24,7 +24,7 @@ async function readJSON(req) {
   }
   try { return JSON.parse((await readBody(req)).toString('utf8')); } catch(error) { if(error instanceof AppError) throw error; throw new AppError('Data JSON tidak valid.'); }
 }
-const summary=record=>({id:record.id,slug:record.slug,names:record.draft.couple.map(person=>person.name).join(' & '),date:record.draft.date,status:record.published?'published':'draft',revision:record.revision,updatedAt:record.updatedAt,publishedAt:record.publishedAt,responses:record.responses.length});
+const summary=record=>({id:record.id,slug:record.slug,names:record.draft.couple.map(person=>person.name).join(' & '),date:record.draft.date,templateId:record.draft.templateId||'floral-reverie',status:record.published?'published':'draft',revision:record.revision,updatedAt:record.updatedAt,publishedAt:record.publishedAt,responses:record.responses.length});
 const loopback=req=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
 
 export async function createAPI({store,env,directory}) {
@@ -72,8 +72,10 @@ export async function createAPI({store,env,directory}) {
       await auth.require(req,!['GET','HEAD'].includes(method));
       if(path==='/api/admin/invitations' && method==='GET') {json(res,200,{invitations:(await store.read()).invitations.map(summary)});return;}
       if(path==='/api/admin/invitations' && method==='POST') {
+        const input=await readJSON(req);
+        if(!input || typeof input!=='object' || Array.isArray(input))throw new AppError('Isi undangan tidak valid.');
         const id=randomUUID(), now=new Date().toISOString();
-        const record={id,slug:`undangan-${id.slice(0,8)}`,revision:1,createdAt:now,updatedAt:now,publishedAt:null,draft:newInvitation(id),published:null,responses:[]};
+        const record={id,slug:`undangan-${id.slice(0,8)}`,revision:1,createdAt:now,updatedAt:now,publishedAt:null,draft:newInvitation(id,input.templateId),published:null,responses:[]};
         record.draft.couple=[{name:'Mempelai Wanita',fullName:'Nama lengkap mempelai wanita',family:''},{name:'Mempelai Pria',fullName:'Nama lengkap mempelai pria',family:''}];
         record.draft.gallery=[];record.draft.couplePhoto='';record.draft.story=[];record.draft.sections.story=false;record.draft.sections.gallery=false;
         await store.change(state=>{if(state.invitations.length>=1000)throw new AppError('Batas 1.000 undangan tercapai.');state.invitations.push(record);});
