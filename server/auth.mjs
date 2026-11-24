@@ -25,17 +25,17 @@ export function createAuth(secure = false, persistentSessions = null) {
   }
   return {
     session,
-    async login(res,username) {
+    async login(res,username,principal={role:'admin'}) {
       for (const [key,value] of sessions) if (value.expires < Date.now()) sessions.delete(key);
       if (sessions.size >= 50) sessions.delete(sessions.keys().next().value);
       const token = randomBytes(32).toString('hex'), csrf = randomBytes(24).toString('hex');
-      const value={username,csrf,expires:Date.now()+12*3600_000};
+      const value={username,csrf,principal,expires:Date.now()+12*3600_000};
       if(persistentSessions)await persistentSessions.set(tokenHash(token),value);else sessions.set(token,value);
-      res.setHeader('Set-Cookie',cookie(token,12*3600)); return {username,csrf};
+      res.setHeader('Set-Cookie',cookie(token,12*3600)); return {username,csrf,...principal};
     },
     async require(req, mutation = false) {
       const current = await session(req);
-      if (!current) throw new AppError('Silakan masuk kembali ke admin.',401);
+      if (!current) throw new AppError('Silakan masuk kembali.',401);
       if (mutation && req.headers['x-csrf-token'] !== current.csrf) throw new AppError('Sesi formulir tidak valid. Muat ulang halaman.',403);
       return current;
     },

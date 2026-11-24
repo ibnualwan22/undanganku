@@ -31,8 +31,9 @@ const server=createServer(async(req,res)=>{
     if(pathname.startsWith('/api/')){await api(req,res,url);return;}
     if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return;}
     let file;
-    if(pathname==='/admin'||pathname==='/admin/')file=resolve(root,'admin.html');
-    else if(pathname==='/'||pathname==='/index.html'||/^\/(u|preview)\/[a-zA-Z0-9-]+$/.test(pathname))file=resolve(root,'index.html');
+    if(/^\/(admin|masuk|akun)\/?$/.test(pathname))file=resolve(root,'admin.html');
+    else if(/^\/(u|preview|demo)\/[a-zA-Z0-9-]+$/.test(pathname))file=resolve(root,'invitation.html');
+    else if(pathname==='/'||pathname==='/index.html')file=resolve(root,url.searchParams.has('preview')?'invitation.html':'index.html');
     else if(/^\/uploads\/[a-f0-9-]+\.(png|jpg|webp|mp3|wav|ogg)$/.test(pathname))file=resolve(directory,pathname.slice(1));
     else if((pathname.startsWith('/assets/')||pathname.startsWith('/src/'))&&!pathname.split('/').some(part=>part.startsWith('.'))){
       file=resolve(root,!process.argv.includes('--dist')&&pathname.startsWith('/assets/')?'public/'+pathname.slice(1):pathname.slice(1));
@@ -56,7 +57,7 @@ const server=createServer(async(req,res)=>{
   }
 });
 server.requestTimeout=150000;
-server.listen(port,host,()=>console.log(`Undangan Onlineku: http://localhost:${port}\nAdmin: http://localhost:${port}/admin\nDatabase: ${store.provider==='postgres'?'PostgreSQL':'JSON lokal'}`));
+server.listen(port,host,()=>console.log(`Aksara Invitation: http://localhost:${port}\nAdmin: http://localhost:${port}/admin\nDatabase: ${store.provider==='postgres'?'PostgreSQL':'JSON lokal'}`));
 server.on('error',async error=>{console.error('Server gagal dijalankan:',error.code||'internal error');await store.close();process.exitCode=1;});
 let closing=false;
 function shutdown(){

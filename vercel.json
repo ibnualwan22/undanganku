@@ -8,11 +8,11 @@
     },
     {
       "source": "/u/:slug",
-      "destination": "/index.html"
+      "destination": "/invitation.html"
     },
     {
       "source": "/preview/:slug",
-      "destination": "/index.html"
+      "destination": "/invitation.html"
     },
     {
       "source": "/admin",
@@ -20,6 +20,26 @@
     },
     {
       "source": "/admin/",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/demo/:template",
+      "destination": "/invitation.html"
+    },
+    {
+      "source": "/masuk",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/masuk/",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/akun",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/akun/",
       "destination": "/admin.html"
     }
   ],

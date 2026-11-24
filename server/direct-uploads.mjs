@@ -10,14 +10,14 @@ function configuration(env) {
   if (!status.ready || status.provider !== 'cloudinary') throw new AppError('Upload langsung memerlukan konfigurasi Cloudinary lengkap.',503);
   if (!/^[a-zA-Z0-9_-]+$/.test(env.CLOUDINARY_CLOUD_NAME)) throw new AppError('Cloud name Cloudinary tidak valid.',503);
 }
-export function signDirectUpload(input, env, now = Date.now()) {
+export function signDirectUpload(input, env, now = Date.now(), scope = null) {
   configuration(env);
   const {kind, size} = input;
   if (!Object.hasOwn(limits,kind) || !Number.isInteger(size) || size <= 0 || size > limits[kind]) throw new AppError('Pilih gambar maksimal 10 MB atau musik maksimal 20 MB.');
   const id = randomUUID(), folder = (env.CLOUDINARY_FOLDER || 'undangan-onlineku').replace(/^\/+|\/+$/g,'');
   const publicId = `${folder}/${id}`;
   const params = {public_id:publicId, timestamp:String(Math.floor(now/1000)), overwrite:'false', allowed_formats:Object.keys(formats[kind]).join(',')};
-  const ticket = {id,kind,name:String(input.name||'upload').slice(0,200),publicId,expires:now+15*60_000,createdAt:new Date(now).toISOString()};
+  const ticket = {id,kind,scope,name:String(input.name||'upload').slice(0,200),publicId,expires:now+15*60_000,createdAt:new Date(now).toISOString()};
   const payload = Buffer.from(JSON.stringify(ticket)).toString('base64url');
   return {
     url:`https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/${kind==='audio'?'video':'image'}/upload`,
@@ -25,13 +25,14 @@ export function signDirectUpload(input, env, now = Date.now()) {
     ticket:payload+'.'+mac(payload,env.CLOUDINARY_API_SECRET).toString('base64url'),
   };
 }
-export async function completeDirectUpload(token, env, {fetcher=fetch, now=Date.now()} = {}) {
+export async function completeDirectUpload(token, env, {fetcher=fetch, now=Date.now(), scope=null} = {}) {
   configuration(env);
   if (typeof token !== 'string' || token.length > 4000) throw new AppError('Izin upload tidak valid.',403);
   const [payload, signature, extra] = token.split('.');
   const actual = Buffer.from(signature||'', 'base64url'), expected = mac(payload||'',env.CLOUDINARY_API_SECRET);
   if (extra || actual.length !== expected.length || !timingSafeEqual(actual,expected)) throw new AppError('Izin upload tidak valid.',403);
   let ticket;try { ticket=JSON.parse(Buffer.from(payload,'base64url').toString()); } catch { throw new AppError('Izin upload tidak valid.',403); }
+  if ((ticket.scope??null)!==scope) throw new AppError('Izin upload bukan milik undangan ini.',403);
   if (ticket.expires < now) throw new AppError('Izin upload kedaluwarsa. Pilih file kembali.',403);
   const resourceType = ticket.kind==='audio'?'video':'image';
   let response;

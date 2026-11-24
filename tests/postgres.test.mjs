@@ -80,6 +80,22 @@ test('PostgreSQL migration, transactions, concurrent writes, persistent sessions
       assert.equal((await fetch(bases[1]+`/api/admin/invitations/${sunset.id}/publish`,{method:'POST',headers,body:JSON.stringify({revision:sunset.revision})})).status,200);
       const liveSunset=await(await fetch(bases[0]+'/api/invitations/'+sunset.slug)).json();
       assert.equal(liveSunset.templateId,'sunset-bloom');assert.equal(liveSunset.decoration,'/assets/sunset-bloom.webp');
+      // Customer role and invitation scope must survive across Vercel instances.
+      const customerLogin=await fetch(bases[0]+'/api/login',{method:'POST',headers:{Origin:bases[0],'Content-Type':'application/json'},body:JSON.stringify(sunset.credentials)});
+      assert.equal(customerLogin.status,200);
+      const customer=await customerLogin.json(),customerCookie=customerLogin.headers.get('set-cookie').split(';')[0];
+      const customerHeaders={Cookie:customerCookie,Origin:bases[1],'X-CSRF-Token':customer.csrf,'Content-Type':'application/json'};
+      const customerSession=await(await fetch(bases[1]+'/api/session',{headers:customerHeaders})).json();
+      assert.equal(customerSession.role,'customer');assert.equal(customerSession.invitationId,sunset.id);
+      assert.equal((await fetch(bases[1]+'/api/admin/invitations',{headers:customerHeaders})).status,403);
+      assert.equal((await fetch(bases[1]+`/api/editor/invitations/${record.id}`,{headers:customerHeaders})).status,403);
+      const own=await(await fetch(bases[1]+`/api/editor/invitations/${sunset.id}`,{headers:customerHeaders})).json();
+      own.draft.location='Customer update';
+      assert.equal((await fetch(bases[1]+`/api/editor/invitations/${sunset.id}`,{method:'PUT',headers:customerHeaders,body:JSON.stringify(own)})).status,200);
+      assert.equal((await a.read()).invitations.find(item=>item.id===sunset.id).draft.location,'Customer update');
+      const accessRevision=(await a.read()).invitations.find(item=>item.id===sunset.id).revision;
+      assert.equal((await fetch(bases[1]+`/api/admin/invitations/${sunset.id}/access`,{method:'POST',headers,body:JSON.stringify({action:'revoke',revision:accessRevision})})).status,200);
+      assert.equal((await(await fetch(bases[0]+'/api/session',{headers:{Cookie:customerCookie}})).json()).authenticated,false);
       assert.equal((await fetch(bases[1]+'/api/logout',{method:'POST',headers,body:'{}'})).status,200);
       assert.equal((await(await fetch(bases[0]+'/api/session',{headers:{Cookie:cookie}})).json()).authenticated,false);
     });

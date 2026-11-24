@@ -32,7 +32,7 @@ export async function createPostgresStore({env}) {
       await client.query('CREATE SCHEMA IF NOT EXISTS undangan');
       await client.query('CREATE TABLE IF NOT EXISTS undangan.schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const {rows} = await client.query('SELECT version FROM undangan.schema_migrations ORDER BY version');
-      const migrations = ['001-initial.sql', '002-sessions.sql'];
+      const migrations = ['001-initial.sql', '002-sessions.sql', '003-customer-access.sql'];
       if (rows.some(row => row.version > migrations.length)) throw new Error('Versi database lebih baru daripada aplikasi ini.');
       for (const [index, file] of migrations.entries()) if (!rows.some(row => row.version === index + 1)) {
         await client.query(await readFile(new URL('./migrations/' + file, import.meta.url), 'utf8'));
@@ -55,13 +55,13 @@ export async function createPostgresStore({env}) {
     close: () => pool.end(),
     sessions: {
       async get(tokenHash) {
-        const {rows} = await pool.query('SELECT username, csrf, expires_at FROM undangan.sessions WHERE token_hash=$1 AND expires_at > now()', [tokenHash]);
-        return rows[0] ? {username:rows[0].username, csrf:rows[0].csrf, expires:rows[0].expires_at.getTime()} : null;
+        const {rows} = await pool.query('SELECT username, csrf, expires_at, principal FROM undangan.sessions WHERE token_hash=$1 AND expires_at > now()', [tokenHash]);
+        return rows[0] ? {username:rows[0].username, csrf:rows[0].csrf, principal:rows[0].principal, expires:rows[0].expires_at.getTime()} : null;
       },
       async set(tokenHash, session) {
         await transaction(async client => {
           await client.query('DELETE FROM undangan.sessions WHERE expires_at <= now()');
-          await client.query('INSERT INTO undangan.sessions(token_hash, username, csrf, expires_at) VALUES ($1,$2,$3,$4)', [tokenHash, session.username, session.csrf, new Date(session.expires)]);
+          await client.query('INSERT INTO undangan.sessions(token_hash, username, csrf, expires_at, principal) VALUES ($1,$2,$3,$4,$5)', [tokenHash, session.username, session.csrf, new Date(session.expires), session.principal||{role:'admin'}]);
           await client.query('DELETE FROM undangan.sessions WHERE token_hash IN (SELECT token_hash FROM undangan.sessions WHERE username=$1 ORDER BY expires_at DESC OFFSET 50)', [session.username]);
         }, {write:true});
       },
@@ -83,8 +83,8 @@ async function readState(client) {
   return {
     version:1,
     admin:admins[0] ? {username:admins[0].username, password:admins[0].password_hash} : null,
-    assets:assets.map(row => ({id:row.id, kind:row.kind, name:row.name, size:Number(row.size), mime:row.mime, createdAt:iso(row.created_at), provider:row.provider, url:row.url, ...(row.public_id == null ? {} : {publicId:row.public_id})})),
-    invitations:invitations.map(row => ({id:row.id, slug:row.slug, revision:row.revision, createdAt:iso(row.created_at), updatedAt:iso(row.updated_at), publishedAt:iso(row.published_at), draft:row.draft, published:row.published, responses:grouped.get(row.id) || []})),
+    assets:assets.map(row => ({id:row.id, kind:row.kind, name:row.name, size:Number(row.size), mime:row.mime, createdAt:iso(row.created_at), provider:row.provider, url:row.url, ...(row.invitation_id == null ? {} : {invitationId:row.invitation_id}), ...(row.public_id == null ? {} : {publicId:row.public_id})})),
+    invitations:invitations.map(row => ({id:row.id, slug:row.slug, revision:row.revision, createdAt:iso(row.created_at), updatedAt:iso(row.updated_at), publishedAt:iso(row.published_at), draft:row.draft, published:row.published, ...(row.access == null ? {} : {access:row.access}), responses:grouped.get(row.id) || []})),
   };
 }
 
@@ -106,8 +106,8 @@ async function syncRows(client, table, keys, before, after) {
 }
 async function persist(client, before, after) {
   const adminRows = state => state.admin ? [{id:1, username:state.admin.username, password_hash:state.admin.password}] : [];
-  const invitationRows = state => state.invitations.map((item, position) => ({id:item.id, slug:item.slug, revision:item.revision, created_at:item.createdAt, updated_at:item.updatedAt, published_at:item.publishedAt, draft:item.draft, published:item.published, position}));
-  const assetRows = state => state.assets.map((item, position) => ({id:item.id, kind:item.kind, name:item.name, size:item.size, mime:item.mime, created_at:item.createdAt, provider:item.provider, url:item.url, public_id:item.publicId ?? null, position}));
+  const invitationRows = state => state.invitations.map((item, position) => ({id:item.id, slug:item.slug, revision:item.revision, created_at:item.createdAt, updated_at:item.updatedAt, published_at:item.publishedAt, draft:item.draft, published:item.published, access:item.access ?? null, position}));
+  const assetRows = state => state.assets.map((item, position) => ({id:item.id, kind:item.kind, name:item.name, size:item.size, mime:item.mime, created_at:item.createdAt, provider:item.provider, url:item.url, public_id:item.publicId ?? null, invitation_id:item.invitationId ?? null, position}));
   const responseRows = state => state.invitations.flatMap(item => item.responses.map((response, position) => ({invitation_id:item.id, id:response.id, name:response.name, attendance:response.attendance, guests:response.guests, message:response.message, visible:response.visible, created_at:response.createdAt, position})));
   await syncRows(client, 'admins', ['id'], adminRows(before), adminRows(after));
   await syncRows(client, 'invitations', ['id'], invitationRows(before), invitationRows(after));

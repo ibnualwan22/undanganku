@@ -37,7 +37,7 @@ function foldLine(line) {
 
 export function createCalendar(data) {
   const names = data.couple.map(person => person.name).join(' & ');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Undangan Onlineku//Floral Reverie//ID', 'CALSCALE:GREGORIAN'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Aksara Invitation//Wedding Invitation//ID', 'CALSCALE:GREGORIAN'];
   data.events.forEach((event, index) => {
     lines.push('BEGIN:VEVENT', `UID:${icsEscape(data.id)}-${index}@undangan-onlineku.local`, `DTSTAMP:${icsDate(Date.now())}`, `DTSTART:${icsDate(event.start)}`, `DTEND:${icsDate(event.end)}`, `SUMMARY:${icsEscape(`${event.title} — ${names}`)}`, `LOCATION:${icsEscape(`${event.venue}, ${event.address}`)}`, `DESCRIPTION:${icsEscape(data.demo ? 'Contoh acara untuk pratinjau template Floral Reverie. Bukan undangan acara sungguhan.' : `Pernikahan ${names}.`)}`, 'END:VEVENT');
   });

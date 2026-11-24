@@ -1,4 +1,4 @@
-# Undangan Onlineku · Studio Admin
+# Aksara Invitation
 
 Admin untuk mengelola banyak undangan dengan pilihan desain **Floral Reverie**, **Sunset Bloom**, dan **Monochrome Vows**. Gambar, dekorasi, QR rekening, dan musik diunggah dari halaman admin. Data undangan disimpan pada server, bukan hanya browser.
 
@@ -12,7 +12,19 @@ Memerlukan Node.js 22+. Jalankan `npm ci` untuk memasang driver PostgreSQL.
 4. Pada penggunaan lokal pertama, buat username dan password admin (minimal 12 karakter).
 5. Pilih **Kelola** pada undangan contoh atau **Buat undangan** untuk pasangan baru.
 
-Halaman `/` tetap menjadi contoh template. Undangan sebenarnya menggunakan `/u/nama-tautan` setelah diterbitkan. Data contoh bawaan perlu diganti sebelum digunakan untuk acara sungguhan.
+Halaman `/` adalah halaman pemasaran Aksara Invitation dengan katalog desain dan konsultasi WhatsApp. Contoh template tersedia di `/demo/ID-DESAIN`. Undangan sebenarnya menggunakan `/u/nama-tautan` setelah diterbitkan. Data contoh bawaan perlu diganti sebelum digunakan untuk acara sungguhan.
+
+## Akses pelanggan
+
+- Halaman publik: `/`. Login pelanggan: `/masuk` (alias `/akun`). Admin: `/admin`.
+- Nomor konsultasi: **6281227225453**. Katalog memakai daftar yang sama dengan pemilih desain di admin (`src/templates.js`); desain berstatus `planned` tidak dapat dipesan atau dipreview.
+- Setelah admin membuat undangan, sistem otomatis membuat username dan password khusus. Dialog **Akses pelanggan** menampilkan detail login **sekali**. Salin dan simpan secara pribadi; lengkapi nama mempelai, desain, dan tautan sebelum membagikan akses.
+- Untuk undangan lama, buka **Kelola → Akses pelanggan → Buat akses pelanggan**. Admin dapat membuat password baru atau menonaktifkan akses. Reset dan penonaktifan langsung membatalkan sesi pelanggan lama; undangan yang sudah terbit tetap dapat dibuka tamu.
+- Pelanggan langsung masuk ke undangannya sendiri. Foto, musik, acara, peta, cerita, rekening, komponen, tautan tamu, dan moderasi respons dapat dikelola. Pelanggan juga dapat menyimpan draft, menerbitkan perubahan, dan membatalkan publikasi.
+- **Nama panggilan dan nama lengkap kedua mempelai, desain, serta tautan utama dikunci untuk pelanggan.** Kunci berlaku pada UI dan API. Admin tetap bisa mengoreksi identitas/desain; tautan utama tetap tidak dapat diganti setelah pernah terbit.
+- Password hanya disimpan sebagai hash scrypt. API pembacaan undangan tidak mengirim hash atau password. API `/api/admin/*` khusus admin; `/api/editor/*` membatasi pelanggan pada undangannya. Tiket upload Cloudinary dan aset pelanggan terikat pada undangan pemiliknya.
+- Migrasi PostgreSQL `003-customer-access.sql` otomatis menambah kolom akses, pemilik media, dan principal sesi pada saat aplikasi terhubung. Isi undangan dan URL media yang sudah ada dipertahankan. Sesi pelanggan tetap dikenali lintas instance Vercel.
+- Perubahan ini perlu di-deploy ke Vercel agar muncul pada domain produksi. Tetap gunakan `DATABASE_URL`, `APP_ORIGIN`, `ADMIN_PASSWORD`, dan konfigurasi Cloudinary yang ada; tidak ada variabel rahasia pelanggan baru di frontend.
 
 ## Pilihan desain
 
@@ -20,9 +32,10 @@ Klik **Buat undangan → Pilih desain → Gunakan desain**. Tombol **Preview** m
 
 - **Floral Reverie:** ivory dan sage dengan bunga cat air.
 - **Sunset Bloom:** terracotta, jingga, dan kuning lembut; bunga taman, sampul lengkung, serta galeri berbingkai.
+- **Monochrome Vows:** potret separuh wajah, foto otomatis hitam putih, dan animasi pergantian bagian.
 - **Garden Celebration** dan **Lilac Romance:** tercatat sebagai **Dalam rencana**, belum dapat dipilih.
 
-Preview Sunset Bloom tersedia di `/?preview=sunset-bloom`. Semua template menggunakan struktur isi yang sama, termasuk opsi komponen, foto, musik, peta, rekening, dan tautan tamu. Pada editor **Pasangan & teks → Desain undangan**, desain bisa diganti tanpa mengisi ulang konten. Dekorasi bawaan mengikuti template; dekorasi unggahan sendiri atau dekorasi yang sengaja dikosongkan dipertahankan. **Simpan draft** memperbarui preview, lalu **Perbarui terbitan** untuk menerapkan desain bagi tamu.
+Preview Sunset Bloom tersedia di `/demo/sunset-bloom`. Semua template menggunakan struktur isi yang sama, termasuk opsi komponen, foto, musik, peta, rekening, dan tautan tamu. Pada editor admin **Pasangan & teks → Desain undangan**, desain bisa diganti tanpa mengisi ulang konten. Dekorasi bawaan mengikuti template; dekorasi unggahan sendiri atau dekorasi yang sengaja dikosongkan dipertahankan. **Simpan draft** memperbarui preview, lalu **Perbarui terbitan** untuk menerapkan desain bagi tamu.
 
 `templateId` disimpan di JSON draft/publikasi yang sudah ada, sehingga tidak membutuhkan migrasi kolom PostgreSQL. Undangan lama tanpa `templateId` memakai Floral Reverie. Desain yang masih direncanakan atau tidak dikenal ditolak saat membuat atau menyimpan undangan.
 
@@ -65,7 +78,7 @@ Implementasi mengikuti [Cloudinary Upload API](https://cloudinary.com/documentat
 
 ## PostgreSQL
 
-PostgreSQL menyimpan akun admin, isi undangan, draft/versi terbit, rekening, RSVP, metadata media, dan sesi login. File gambar/musik tetap di Cloudinary; tabel media hanya memuat URL serta metadata.
+PostgreSQL menyimpan akun admin, akses pelanggan per undangan, isi undangan, draft/versi terbit, rekening, RSVP, metadata media, dan sesi login. File gambar/musik tetap di Cloudinary; tabel media hanya memuat URL serta metadata.
 
 Isi `DATABASE_URL` pada `.env` (lokal) atau Environment Variables Vercel. Gunakan connection string dan pengaturan SSL dari penyedia PostgreSQL. Untuk Vercel, gunakan koneksi dengan pooling yang disediakan penyedia. Kredensial tidak perlu ditulis dalam kode.
 
@@ -184,3 +197,9 @@ docs/assets.md                          Sumber aset dan prompt ilustrasi
 ```
 
 Belum termasuk katalog/order publik, pembayaran, editor desain bebas, atau impor daftar tamu ke database. Penambahan desain baru memerlukan implementasi tampilan, aset, dan pendaftaran pada `src/templates.js`. Template berstatus `planned` hanya ditampilkan sebagai rencana; ubah menjadi `ready` setelah desain siap dan diuji.
+
+## Pengujian upgrade Aksara
+
+`npm test` mencakup pembuatan akses, isolasi undangan, penguncian nama/desain/tautan, kepemilikan media, publikasi, reset, dan pencabutan sesi. Jalankan `TEST_DATABASE_URL=... node --test tests/postgres.test.mjs` pada PostgreSQL pengujian untuk memverifikasi migrasi serta sesi lintas instance.
+
+`node tests/aksara-browser.mjs` menggunakan server terisolasi port 4180 dan Chromium CDP port 9222, seperti pengujian browser lainnya. Pengujian memeriksa katalog ukuran 320–1440px, ketiga preview, dialog akses admin, login pelanggan, kolom terkunci, upload foto, penyimpanan, publikasi, dan preview pribadi. Akun uji: `admin` / `local-browser-test-password`; jangan jalankan terhadap data produksi.

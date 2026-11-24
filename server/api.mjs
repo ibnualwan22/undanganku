@@ -1,3 +1,4 @@
+import { issueAccess, editorRecord, checkCustomer, checkLocked, customerAssets } from './customer-access.mjs';
 import { randomUUID } from 'node:crypto';
 import { AppError, newInvitation, validateInvitation, publicInvitation, validateResponse } from './schema.mjs';
 import { findRecord, checkRevision } from './store.mjs';
@@ -33,6 +34,13 @@ export async function createAPI({store,env,directory}) {
     await store.change(state=>{if(!state.admin)state.admin={username:env.ADMIN_USERNAME||'admin',password};});
   }
   const auth=createAuth(env.APP_ORIGIN?.startsWith('https://'),store.sessions);
+  async function currentSession(req,required=false,mutation=false) {
+    const session=required?await auth.require(req,mutation):await auth.session(req);
+    if(!session)return null;
+    const principal={role:'admin',...session.principal,username:session.username};
+    try{checkCustomer(await store.read(),principal);}catch(error){if(required)throw error;return null;}
+    return {...session,...principal};
+  }
   const setupAllowed=req=>loopback(req)&&!env.APP_ORIGIN;
   const limits=new Map();
   function throttle(key,max,window=600000) {
@@ -43,14 +51,15 @@ export async function createAPI({store,env,directory}) {
     if(current.count>max) throw new AppError('Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.',429);
   }
   return async function handleAPI(req,res,url) {
-    const path=url.pathname, method=req.method;
+    const editorRoute=url.pathname.startsWith('/api/editor/');
+    const path=editorRoute?url.pathname.replace('/api/editor/','/api/admin/'):url.pathname, method=req.method;
     if(!['GET','HEAD'].includes(method)) {
       const expected=env.APP_ORIGIN || `http://${req.headers.host}`;
       if(req.headers.origin!==expected) throw new AppError('Permintaan berasal dari halaman yang tidak diizinkan.',403);
     }
     if(path==='/api/session' && method==='GET') {
-      const current=await auth.session(req);
-      json(res,200,{initialized:!!(await store.read()).admin,setupAllowed:setupAllowed(req),authenticated:!!current,...(current?{username:current.username,csrf:current.csrf}:{}),storage:storageStatus(env),database:{provider:store.provider||'json'}}); return;
+      const current=await currentSession(req);
+      json(res,200,{initialized:!!(await store.read()).admin,setupAllowed:setupAllowed(req),authenticated:!!current,...(current?{username:current.username,csrf:current.csrf,role:current.role,...(current.role==='customer'?{invitationId:current.invitationId}:{})}:{}),storage:storageStatus(env),database:{provider:store.provider||'json'}}); return;
     }
     if(path==='/api/setup' && method==='POST') {
       if(!setupAllowed(req)) throw new AppError('Untuk hosting publik, isi ADMIN_PASSWORD di .env sebelum menjalankan server. Setup browser hanya tersedia di komputer lokal.',403);
@@ -63,23 +72,30 @@ export async function createAPI({store,env,directory}) {
     }
     if(path==='/api/login' && method==='POST') {
       throttle(`login:${req.socket.remoteAddress}`,15);
-      const input=await readJSON(req), admin=(await store.read()).admin;
-      if(!admin || !(await verifyPassword(input.password,admin.password)) || input.username!==admin.username) throw new AppError('Username atau password tidak cocok.',401);
-      json(res,200,await auth.login(res,admin.username));return;
+      const input=await readJSON(req), state=await store.read(), admin=state.admin;
+      const record=state.invitations.find(item=>item.access?.username===input.username && item.access.enabled);
+      const account=input.username===admin?.username?admin:record?.access;
+      if(!account || !(await verifyPassword(input.password,account.password))) throw new AppError('Username atau password tidak cocok.',401);
+      const principal=account===admin?{role:'admin'}:{role:'customer',invitationId:record.id,accessVersion:account.version};
+      json(res,200,await auth.login(res,account.username,principal));return;
     }
     if(path==='/api/logout' && method==='POST') {await auth.require(req,true);await auth.logout(req,res);json(res,200,{ok:true});return;}
     if(path.startsWith('/api/admin/')) {
-      await auth.require(req,!['GET','HEAD'].includes(method));
+      const current=await currentSession(req,true,!['GET','HEAD'].includes(method));
+      const customer=current.role==='customer';
+      if(customer && (!editorRoute || !(path===`/api/admin/invitations/${current.invitationId}` || ['publish','unpublish','responses'].some(action=>path===`/api/admin/invitations/${current.invitationId}/${action}`) || ['/api/admin/uploads','/api/admin/uploads/sign','/api/admin/uploads/complete'].includes(path))))throw new AppError('Anda hanya dapat mengelola undangan sendiri.',403);
+      const scope=customer?current.invitationId:null;
       if(path==='/api/admin/invitations' && method==='GET') {json(res,200,{invitations:(await store.read()).invitations.map(summary)});return;}
       if(path==='/api/admin/invitations' && method==='POST') {
         const input=await readJSON(req);
         if(!input || typeof input!=='object' || Array.isArray(input))throw new AppError('Isi undangan tidak valid.');
         const id=randomUUID(), now=new Date().toISOString();
         const record={id,slug:`undangan-${id.slice(0,8)}`,revision:1,createdAt:now,updatedAt:now,publishedAt:null,draft:newInvitation(id,input.templateId),published:null,responses:[]};
+        const issued=await issueAccess();record.access=issued.access;
         record.draft.couple=[{name:'Mempelai Wanita',fullName:'Nama lengkap mempelai wanita',family:''},{name:'Mempelai Pria',fullName:'Nama lengkap mempelai pria',family:''}];
         record.draft.gallery=[];record.draft.couplePhoto='';record.draft.story=[];record.draft.sections.story=false;record.draft.sections.gallery=false;
         await store.change(state=>{if(state.invitations.length>=1000)throw new AppError('Batas 1.000 undangan tercapai.');state.invitations.push(record);});
-        json(res,201,record);return;
+        json(res,201,{...editorRecord(record),credentials:issued.credentials});return;
       }
       if(path==='/api/admin/uploads' && method==='POST') {
         throttle(`upload:${req.socket.remoteAddress}`,80);
@@ -90,39 +106,56 @@ export async function createAPI({store,env,directory}) {
         const file=form.get('file'),kind=form.get('kind');
         if(!file || typeof file.arrayBuffer!=='function' || !['image','audio'].includes(kind)) throw new AppError('File atau jenis upload tidak valid.');
         const asset=await uploadMedia({buffer:Buffer.from(await file.arrayBuffer()),kind,name:file.name,env,directory});
-        await store.change(state=>state.assets.push(asset));json(res,201,{asset});return;
+        if(scope)asset.invitationId=scope;
+        await store.change(state=>{checkCustomer(state,current);state.assets.push(asset);});json(res,201,{asset});return;
       }
       if(path==='/api/admin/uploads/sign' && method==='POST') {
         throttle(`upload-sign:${req.socket.remoteAddress}`,80);
-        json(res,200,signDirectUpload(await readJSON(req),env));return;
+        json(res,200,signDirectUpload(await readJSON(req),env,Date.now(),scope));return;
       }
       if(path==='/api/admin/uploads/complete' && method==='POST') {
         throttle(`upload-complete:${req.socket.remoteAddress}`,120);
-        const input=await readJSON(req), asset=await completeDirectUpload(input.ticket,env);
-        await store.change(state=>{if(!state.assets.some(item=>item.id===asset.id))state.assets.push(asset);});
+        const input=await readJSON(req), asset=await completeDirectUpload(input.ticket,env,{scope});
+        if(scope)asset.invitationId=scope;
+        await store.change(state=>{checkCustomer(state,current);if(!state.assets.some(item=>item.id===asset.id))state.assets.push(asset);});
         json(res,201,{asset});return;
       }
-      const match=path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9-]+)(?:\/(publish|unpublish|responses))?$/);
+      const match=path.match(/^\/api\/admin\/invitations\/([a-zA-Z0-9-]+)(?:\/(publish|unpublish|responses|access))?$/);
       if(match) {
         const [,id,action]=match;
-        if(method==='GET') {
+        if(method==='GET' && (!action || action==='responses')) {
           const record=findRecord(await store.read(),id);
-          json(res,200,action==='responses'?{responses:record.responses}:{...record,responses:undefined,responseCount:record.responses.length});return;
+          json(res,200,action==='responses'?{responses:record.responses}:editorRecord(record,customer));return;
         }
         const input=await readJSON(req);
+        if(action==='access' && method==='POST' && !customer) {
+          if(!['reset','revoke'].includes(input.action))throw new AppError('Tindakan akses tidak valid.');
+          const result=await store.change(async state=>{
+            checkCustomer(state,current);
+            const record=findRecord(state,id);checkRevision(record,input.revision);
+            let credentials;
+            if(input.action==='reset'){const issued=await issueAccess(record.access);record.access=issued.access;credentials=issued.credentials;}
+            else if(record.access){record.access.enabled=false;record.access.version++;}
+            record.revision++;record.updatedAt=new Date().toISOString();
+            return {record:editorRecord(record),...(credentials?{credentials}:{})};
+          });json(res,200,result);return;
+        }
         if(!action && method==='PUT') {
           const result=await store.change(state=>{
+            checkCustomer(state,current);
             const record=findRecord(state,id);checkRevision(record,input.revision);
+            if(customer)checkLocked(record,input);
             const slug=String(input.slug||'').trim().toLowerCase();
             if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length>80 || slug.length<3) throw new AppError('Tautan undangan memakai 3–80 huruf kecil, angka, atau tanda hubung.');
             if(record.publishedAt && slug!==record.slug) throw new AppError('Tautan undangan yang pernah diterbitkan tetap agar tautan tamu tidak rusak.');
             if(state.invitations.some(item=>item.id!==id&&item.slug===slug)) throw new AppError('Tautan itu sudah dipakai undangan lain.',409);
-            record.draft=validateInvitation(input.draft,id,state.assets);record.slug=slug;record.revision++;record.updatedAt=new Date().toISOString();
-            return {...record,responses:undefined,responseCount:record.responses.length};
+            record.draft=validateInvitation(input.draft,id,customer?customerAssets(state,record):state.assets);record.slug=slug;record.revision++;record.updatedAt=new Date().toISOString();
+            return editorRecord(record,customer);
           });json(res,200,result);return;
         }
         if(['publish','unpublish'].includes(action) && method==='POST') {
           const result=await store.change(state=>{
+            checkCustomer(state,current);
             const record=findRecord(state,id);checkRevision(record,input.revision);
             if(action==='publish') {
               const draft=validateInvitation(record.draft,id,state.assets);
@@ -134,6 +167,7 @@ export async function createAPI({store,env,directory}) {
         }
         if(action==='responses' && method==='PATCH') {
           const result=await store.change(state=>{
+            checkCustomer(state,current);
             const record=findRecord(state,id), response=record.responses.find(item=>item.id===input.id);
             if(!response)throw new AppError('Respons tidak ditemukan.',404);
             response.visible=input.visible===true;return response;

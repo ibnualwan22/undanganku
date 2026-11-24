@@ -10,7 +10,7 @@ export const templates = [
     category: 'Floral', status: 'ready',
     palette: ['#f8f6ef', '#50624b', '#d9b8af'],
     decoration: '/assets/floral-watercolor.png',
-    preview: '/?preview=floral-reverie',
+    preview: '/demo/floral-reverie',
   },
   {
     id: 'sunset-bloom',
@@ -19,13 +19,13 @@ export const templates = [
     category: 'Floral', status: 'ready',
     palette: ['#fff3d9', '#a3472d', '#e6ad49'],
     decoration: '/assets/sunset-bloom.webp',
-    preview: '/?preview=sunset-bloom',
+    preview: '/demo/sunset-bloom',
   },
   {
     id: 'monochrome-vows', name: 'Monochrome Vows', status: 'ready', category: 'Portrait',
     description: 'Potret separuh wajah, hitam-putih, dan tipografi editorial. Intim, tegas, dan sinematik.',
     palette: ['#111111', '#ffffff', '#999999'], decoration: '',
-    preview: '/?preview=monochrome-vows',
+    preview: '/demo/monochrome-vows',
   },
   {
     id: 'garden-celebration', name: 'Garden Celebration', status: 'planned',
